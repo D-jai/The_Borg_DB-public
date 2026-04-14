@@ -8,7 +8,7 @@
 
 ## Abstract
 
-This paper presents The_Borg_DB, a local-first knowledge intelligence system that extracts structured knowledge from unstructured text, stores it in a dual SQL + vector architecture, answers hybrid queries through four distinct retrieval modes, and continuously mines accumulated data for higher-order patterns through a 18-stage farming pipeline. Unlike cloud-dependent AI memory systems, The_Borg_DB runs entirely on user-controlled hardware -- from a $50 Raspberry Pi to enterprise servers -- ensuring complete data sovereignty. A cross-device aggregation layer (the hive-collective) enables multi-instance intelligence discovery without transmitting raw data. The system is designed for regulated industries (healthcare, finance, defense, legal) where cloud processing of sensitive data is legally or operationally prohibited.
+This paper presents The_Borg_DB, a local-first knowledge intelligence system that extracts structured knowledge from unstructured text, stores it in a dual SQL + vector architecture, answers hybrid queries through four distinct retrieval modes, and continuously mines accumulated data for higher-order patterns through a 18-stage farming pipeline. Unlike cloud-dependent AI memory systems, The_Borg_DB runs entirely on user-controlled hardware -- from a $50 Raspberry Pi to enterprise servers -- ensuring complete data sovereignty. A cross-device aggregation layer (the hive-collective) enables multi-instance intelligence discovery without transmitting raw data. The system is designed for regulated industries (healthcare, finance, defense, legal) where cloud processing of sensitive data is legally or operationally prohibitive.
 
 ---
 
@@ -38,7 +38,7 @@ The explosion of AI-powered knowledge management tools has created a paradox for
 
 These are not edge cases. Healthcare ($4.5 trillion), financial services ($2.1 trillion), and defense represent the largest addressable markets for AI knowledge systems -- and they are systematically locked out of every major cloud-based solution.
 
-The_Borg_DB resolves this by inverting the architecture. Instead of sending data to the model, the model runs where the data lives: on the user's own hardware. The result is a complete knowledge intelligence system that extracts structured facts, answers hybrid queries, and continuously discovers patterns -- all without a single byte of user data leaving the device.
+The_Borg_DB resolves this by inverting the architecture. Instead of sending data to the model, the model runs where the data lives: on the user's own hardware. The result is a complete knowledge intelligence system that extracts structured facts, answers hybrid queries, and continuously discovers patterns -- all without a single byte of user data having to leave the device (local llm required).
 
 This paper describes the technical architecture, the intelligence pipeline, the cross-device aggregation model, and the market positioning of The_Borg_DB.
 
@@ -48,7 +48,7 @@ This paper describes the technical architecture, the intelligence pipeline, the 
 
 ### 2.1 The Limitations of Current AI Memory Systems
 
-We evaluated eight leading AI memory systems: Mem0, Supermemory, Letta, Zep, MemOS, BAI-LAB MemoryOS, Cognee, and Nemp. All share a common paradigm: they capture interactions, extract memories using large language models, store them in vector databases, and retrieve them via semantic search.
+We evaluated eight leading AI memory systems: Many share a common paradigm: they capture interactions, extract memories using large language models, store them in vector databases, and retrieve them via semantic search.
 
 This paradigm has three fundamental limitations:
 
@@ -297,11 +297,11 @@ The farming pipeline is designed for edge deployment. Peak RAM usage is capped a
 
 ---
 
-## 8. Cross-Device Intelligence: The hive-collective
+## 8. Cross-Device, Multiple nodes Intelligence: The hive-collective
 
-### 8.1 The Cross-Device Blind Spot
+### 8.1 The Cross-Device, individual node (instance) Blind Spot
 
-Each device runs its own 18-stage farming pipeline on its own data. But individual devices have blind spots. Your laptop sees Alice and OAuth2. Your meeting room Pi sees Bob and the security audit. Your phone sees Alice and the budget review. No single device sees the connection between Alice and the security audit through their shared association with OAuth2.
+Each device or instance or node runs its own 18-stage farming pipeline on its own data. But individual devices, instances or nodes have blind spots. Your laptop sees Alice and OAuth2. Your meeting room Pi or PC or transcripts node DB, sees Bob and the security audit. Your other instance sees Alice and the budget review. No single device or instance sees the connection between Alice and the security audit through their shared association with OAuth2.  Only when individual node insights are pushed to the 'hive-collective', we get rich intelligence.
 
 The hive-collective resolves this.
 
@@ -422,20 +422,7 @@ Switching profiles is instantaneous -- a single configuration change. The extrac
 
 ## 13. Competitive Analysis
 
-| Capability | The_Borg_DB | Mem0 | Langchain Memory | Notion AI | Standard RAG |
-|-----------|:------:|:----:|:----------------:|:---------:|:------------:|
-| Structured SPO fact extraction | Yes | No | No | No | No |
-| Dual-store (SQL + Vector) | Yes | No | Partial | No | No |
-| Four retrieval modes (V2S/S2V/Deep) | Yes | No | No | No | No |
-| 18-stage background farming | Yes | No | No | No | No |
-| Cross-device hive-collective intelligence | Yes (local) | Cloud only | Cloud only | Cloud only | No |
-| Fully local, zero cloud dependency | Yes | No | No | No | No |
-| Runs on Raspberry Pi | Yes | No | No | No | No |
-| Per-role LLM API configuration | Yes | No | No | No | No |
-| Domain profiles (16+ verticals) | Yes | No | No | No | No |
-| Self-improving without user action | Yes | No | No | No | No |
-| Causal pattern discovery | Yes | No | No | No | No |
-| Coverage gap detection | Yes | No | No | No | No |
+Left Blank purposely.
 
 ### 13.1 Strategic Moat
 
@@ -445,7 +432,7 @@ The competitive moat has three layers:
 
 2. **Regulatory** -- The_Borg_DB is the only system that can operate in HIPAA, SOX, ITAR, and FERPA environments without compliance exceptions. This is not a feature -- it is a market category.
 
-3. **Compounding intelligence** -- The farming pipeline means The_Borg_DB improves overnight. Every day of data accumulation produces exponentially richer insights. Competitors offer static retrieval that does not compound.
+3. **Compounding intelligence** -- The farming pipeline means The_Borg_DB improves overnight. Every day of data accumulation produces richer insights. Competitors offer static retrieval that does not compound.
 
 ---
 
@@ -464,7 +451,7 @@ The largest sectors for AI knowledge management are precisely the ones locked ou
 | Manufacturing | $2.3T | Trade secrets, ITAR |
 | Education | $1.5T | FERPA student privacy |
 
-Combined, these sectors represent over $12 trillion in economic activity with active demand for AI knowledge tools and a legal prohibition on using cloud-based solutions.
+Combined, these sectors represent over $12 trillion in economic activity with active demand for AI knowledge tools and a legal prohibition or concern on using cloud-based solutions.
 
 ### 14.2 Go-to-Market Strategy
 
