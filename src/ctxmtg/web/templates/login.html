@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+{% block nav %}{% endblock %}
+{% block content %}
+<div style="max-width: 380px; margin: 5rem auto;">
+    <div class="card">
+        <h1 style="text-align: center; margin-bottom: 1.5rem;">The_Borg_DB</h1>
+        {% if error %}
+        <div class="alert alert-error">{{ error }}</div>
+        {% endif %}
+        <form method="post" action="/login">
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required autofocus>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

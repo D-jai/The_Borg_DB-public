@@ -1,0 +1,16 @@
+{% if result.errors %}
+<div class="alert alert-error">
+    Pull from "{{ link_name }}" completed with errors:<br>
+    Batches: {{ result.batches }}, Profiles: {{ result.profiles }}, Insights: {{ result.insights }}<br>
+    Errors: {{ result.errors | join("; ") }}
+</div>
+{% elif result.batches == 0 %}
+<div class="alert alert-info">
+    No pending manifests in "{{ link_name }}" outbox.
+</div>
+{% else %}
+<div class="alert alert-success">
+    Pulled from "{{ link_name }}": {{ result.batches }} batch(es),
+    {{ result.profiles }} profiles, {{ result.insights }} insights.
+</div>
+{% endif %}

@@ -1,0 +1,64 @@
+{% extends "hive_base.html" %}
+{% block title %}Insights{% endblock %}
+{% block content %}
+<h1>Hive Insights</h1>
+<p class="text-muted">Intelligence from all linked locals and hive-native discoveries.</p>
+
+<h2 class="mt-2">From Locals</h2>
+{% if local_insights %}
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>Title</th>
+                <th>Source</th>
+                <th>Confidence</th>
+                <th>Created</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for i in local_insights %}
+            <tr>
+                <td><span class="badge badge-info">{{ i.insight_type }}</span></td>
+                <td>{{ i.title }}</td>
+                <td><span class="badge badge-ok">{{ i.source_instance }}</span></td>
+                <td>{{ "%.2f"|format(i.confidence) }}</td>
+                <td class="text-muted">{{ i.created_at[:16] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card"><p class="text-muted">No local insights yet.</p></div>
+{% endif %}
+
+<h2 class="mt-2">Hive-Native</h2>
+{% if native_insights %}
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>Title</th>
+                <th>Confidence</th>
+                <th>Created</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for i in native_insights %}
+            <tr>
+                <td><span class="badge badge-warn">{{ i.insight_type }}</span></td>
+                <td>{{ i.title }}</td>
+                <td>{{ "%.2f"|format(i.confidence) }}</td>
+                <td class="text-muted">{{ i.created_at[:16] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card"><p class="text-muted">No hive-native insights yet. Run hive farming to discover cross-stream patterns.</p></div>
+{% endif %}
+{% endblock %}

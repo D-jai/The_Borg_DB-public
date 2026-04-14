@@ -1,0 +1,61 @@
+{% extends "hive_base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="flex-between">
+    <h1>Hive Dashboard</h1>
+    <button class="btn btn-secondary btn-sm"
+            hx-get="/api/hive-stats"
+            hx-target="#stats-section"
+            hx-indicator="#stats-spinner">
+        Refresh <span id="stats-spinner" class="htmx-indicator spinner"></span>
+    </button>
+</div>
+
+<div id="stats-section"
+     hx-get="/api/hive-stats"
+     hx-trigger="every 30s"
+     hx-swap="innerHTML">
+    {% include "fragments/hive_stats.html" %}
+</div>
+
+<div class="card mt-2">
+    <div class="flex-between">
+        <h2>Linked Locals</h2>
+        <button class="btn btn-primary btn-sm"
+                onclick="document.getElementById('add-link-form').style.display =
+                document.getElementById('add-link-form').style.display === 'none' ? 'block' : 'none'">
+            + Add Link
+        </button>
+    </div>
+
+    <div id="add-link-form" style="display: none;" class="card mt-1">
+        <form hx-post="/api/links" hx-target="#links-table" hx-swap="innerHTML" hx-indicator="#add-spinner">
+            <div class="grid" style="grid-template-columns: 1fr 2fr 1fr auto;">
+                <div class="form-group">
+                    <label>Local Name</label>
+                    <input type="text" name="local_name" required placeholder="e.g., Tickets">
+                </div>
+                <div class="form-group">
+                    <label>Outbox Path</label>
+                    <input type="text" name="outbox_path" required placeholder="/home/user/.ctxmtg/outbox">
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <input type="text" name="notes" placeholder="Optional">
+                </div>
+                <div class="form-group" style="align-self: end;">
+                    <button type="submit" class="btn btn-primary">
+                        Save <span id="add-spinner" class="htmx-indicator spinner"></span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div id="links-table" class="mt-1">
+        {% include "fragments/links_table.html" %}
+    </div>
+</div>
+
+<div id="pull-result" class="mt-1"></div>
+{% endblock %}

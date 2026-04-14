@@ -1,0 +1,98 @@
+[project]
+name = "ctxmtg"
+version = "0.7.0"
+description = "The_Borg_DB — local-first multi-agent knowledge intelligence system"
+requires-python = ">=3.10"
+readme = "README.md"
+license = { text = "BUSL-1.1" }
+authors = [
+    { name = "Dhananjay Raol" },
+]
+maintainers = [
+    { name = "Dhananjay Raol" },
+]
+keywords = [
+    "knowledge-management",
+    "local-first",
+    "rag",
+    "vector-database",
+    "sqlite",
+    "lancedb",
+    "llm",
+    "entity-extraction",
+]
+
+# ---------------------------------------------------------------
+# Core dependencies: the minimum set needed for Tier 0 (Pi) operation.
+# These are intentionally lightweight -- no GPU, no LLM, no server DB.
+# ---------------------------------------------------------------
+dependencies = [
+    "click>=8.1",            # CLI framework
+    "pyyaml>=6.0",           # YAML domain profile loading
+    "pydantic>=2.0",         # Data models and settings
+    "pydantic-settings>=2.0", # Environment variable + YAML config
+    "structlog>=24.0",       # Structured JSON logging
+    "blake3>=0.4",           # Content hashing for change detection
+    "onnxruntime>=1.17",     # Embedding model inference (CPU)
+    "transformers>=4.40",    # HuggingFace tokenizer loading for ONNX embedder
+    "lancedb>=0.6",          # Embedded vector store
+    "spacy>=3.7",            # NER (model downloaded separately)
+    "numpy>=1.24",           # Array operations (used by ONNX, LanceDB, spaCy)
+    "python-docx>=1.0",     # .docx file loading
+    "pdfplumber>=0.10",     # .pdf file loading (text-based, no OCR)
+    "httpx>=0.27",          # async HTTP client (LLM proxy, API calls)
+    "aiosqlite>=0.19",       # Async SQLite driver (core storage + farming + sync)
+]
+
+# ---------------------------------------------------------------
+# Optional dependency groups for higher tiers.
+# Install with: uv pip install "ctxmtg[gpu,llm,web]"
+# ---------------------------------------------------------------
+[project.optional-dependencies]
+
+# GPU acceleration for Tier 3 (desktop with discrete GPU)
+gpu = [
+    "onnxruntime-gpu>=1.17",  # Replaces onnxruntime for CUDA
+    "faiss-gpu>=1.7",          # GPU-accelerated vector search
+]
+
+# Local LLM integration for Tier 2+ (notebook and above)
+llm = [
+    "llama-cpp-python>=0.2",  # llama.cpp Python bindings
+]
+
+# Web command center (dashboard + OpenAI-compat endpoint)
+web = [
+    "fastapi>=0.100",         # ASGI web framework
+    "uvicorn[standard]>=0.27", # ASGI server
+    "jinja2>=3.1",            # HTML template engine (used by Jinja2Templates)
+    "python-multipart>=0.0.9", # Form data parsing
+    "bcrypt>=4.0",            # Password hashing
+]
+
+# Server tier (Tier 4) with PostgreSQL
+server = [
+    "asyncpg>=0.29",          # Async PostgreSQL driver
+    "psycopg[binary]>=3.1",   # Sync PostgreSQL driver
+]
+
+# Full runtime install with every optional tier
+all = [
+    "ctxmtg[gpu,llm,server,web]",
+]
+
+# ---------------------------------------------------------------
+# CLI entry point: 'ctxmtg' command becomes available after install
+# ---------------------------------------------------------------
+[project.scripts]
+ctxmtg = "ctxmtg.cli:main"
+
+# ---------------------------------------------------------------
+# Build system: standard Python packaging
+# ---------------------------------------------------------------
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ctxmtg"]

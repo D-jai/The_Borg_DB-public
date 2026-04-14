@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Local Instance{% endblock %}
+{% block content %}
+<div class="flex-between">
+    <h1>Local Instance</h1>
+    <a href="/" class="btn btn-secondary btn-sm">Back to Dashboard</a>
+</div>
+
+<div class="grid mt-1">
+    <div class="card stat">
+        <div class="value">{{ local_info.get('interactions', 0) }}</div>
+        <div class="label">Interactions</div>
+    </div>
+    <div class="card stat">
+        <div class="value">{{ local_info.get('entities', 0) }}</div>
+        <div class="label">Entities</div>
+    </div>
+    <div class="card stat">
+        <div class="value">{{ local_info.get('facts', 0) }}</div>
+        <div class="label">Facts</div>
+    </div>
+    <div class="card stat">
+        <div class="value">{{ local_info.get('insights', 0) }}</div>
+        <div class="label">Insights</div>
+    </div>
+</div>
+
+<div class="card mt-2">
+    <div class="flex-between">
+        <h2>Active Profile: {{ active_profile_name }}</h2>
+        <div class="flex">
+            {% for p in profiles %}
+            <button class="btn btn-sm {% if p == active_profile_name %}btn-primary{% else %}btn-secondary{% endif %}"
+                    hx-get="/local/profile/{{ p }}"
+                    hx-target="#profile-detail">
+                {{ p }}
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+    <div id="profile-detail" class="mt-1">
+        {% if active_profile.ok %}
+        {% set profile = active_profile.profile %}
+        {% include "fragments/profile_detail.html" %}
+        {% else %}
+        <div class="alert alert-error">{{ active_profile.error }}</div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card mt-2">
+    <h2>Farming Configuration</h2>
+    {% if active_profile.ok %}
+    {% set farming = active_profile.profile.farming %}
+    <form hx-post="/local/farming/params" hx-target="#farming-result" hx-swap="innerHTML">
+        <div class="grid">
+            <div class="form-group">
+                <label for="schedule">Schedule</label>
+                <select id="schedule" name="schedule">
+                    <option value="hourly" {% if farming.schedule == 'hourly' %}selected{% endif %}>Hourly</option>
+                    <option value="daily" {% if farming.schedule == 'daily' %}selected{% endif %}>Daily</option>
+                    <option value="weekly" {% if farming.schedule == 'weekly' %}selected{% endif %}>Weekly</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="lookback_days">Lookback Window (days)</label>
+                <input type="number" id="lookback_days" name="lookback_days"
+                       value="{{ farming.lookback_window_days }}" min="1" max="365">
+            </div>
+            <div class="form-group">
+                <label for="cluster_min">Cluster Min Size</label>
+                <input type="number" id="cluster_min" name="cluster_min"
+                       value="{{ farming.cluster_min_size }}" min="2" max="100">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm mt-1">Update Farming Params</button>
+    </form>
+    <div id="farming-result" class="mt-1"></div>
+    {% endif %}
+</div>
+
+<div class="card mt-2">
+    <div class="flex-between">
+        <h2>Services</h2>
+        <button class="btn btn-secondary btn-sm"
+                hx-get="/local/services"
+                hx-target="#services-content">
+            Refresh
+        </button>
+    </div>
+    <div id="services-content" hx-get="/local/services" hx-trigger="load">
+        <p style="color: var(--muted);">Loading...</p>
+    </div>
+    <div id="services-result" class="mt-1"></div>
+</div>
+
+<div class="card mt-2">
+    <div class="flex-between">
+        <h2>LLM Roles</h2>
+        <button class="btn btn-secondary btn-sm"
+                hx-get="/local/llm-roles"
+                hx-target="#llm-roles-content">
+            Refresh
+        </button>
+    </div>
+    <div id="llm-roles-content" hx-get="/local/llm-roles" hx-trigger="load">
+        <p style="color: var(--muted);">Loading...</p>
+    </div>
+</div>
+
+{% if local_info.last_farming %}
+<div class="card mt-2">
+    <h2>Last Farming Cycle</h2>
+    <table>
+        <tr><th>Cycle</th><td>#{{ local_info.last_farming.cycle_id }}</td></tr>
+        <tr><th>Status</th><td>{{ local_info.last_farming.status }}</td></tr>
+        <tr><th>Started</th><td>{{ local_info.last_farming.started_at }}</td></tr>
+        <tr><th>Completed</th><td>{{ local_info.last_farming.completed_at or 'In progress' }}</td></tr>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

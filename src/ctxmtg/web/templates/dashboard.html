@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="flex-between">
+    <h1>Dashboard</h1>
+    <div class="flex">
+        <button class="btn btn-primary btn-sm"
+                hx-post="/api/farm/run"
+                hx-target="#action-result"
+                hx-indicator="#farm-spinner">
+            Run Farming
+            <span id="farm-spinner" class="htmx-indicator"><span class="spinner"></span></span>
+        </button>
+        <button class="btn btn-secondary btn-sm"
+                hx-post="/api/hive/push"
+                hx-target="#action-result"
+                hx-indicator="#push-spinner">
+            Push to Hive
+            <span id="push-spinner" class="htmx-indicator"><span class="spinner"></span></span>
+        </button>
+    </div>
+</div>
+
+<div id="action-result" class="mt-1"></div>
+
+<div id="stats-container"
+     hx-get="/api/stats"
+     hx-trigger="every 30s"
+     hx-swap="innerHTML">
+    {% include "fragments/stats.html" %}
+</div>
+
+<h2 class="mt-2">Recent Farming Cycles</h2>
+<div class="card">
+    {% if farming_cycles %}
+    <table>
+        <thead>
+            <tr>
+                <th>Cycle</th>
+                <th>Status</th>
+                <th>Trigger</th>
+                <th>Stages</th>
+                <th>Started</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in farming_cycles %}
+            <tr>
+                <td>#{{ c.cycle_id }}</td>
+                <td>
+                    {% if c.status == 'completed' %}
+                    <span class="badge badge-ok">{{ c.status }}</span>
+                    {% elif c.status == 'running' %}
+                    <span class="badge badge-warn">{{ c.status }}</span>
+                    {% else %}
+                    <span class="badge badge-err">{{ c.status }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ c.trigger or '?' }}</td>
+                <td>{{ c.stages_done or '?' }}</td>
+                <td>{{ c.started_at or '?' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: var(--muted); font-size: 0.9rem;">No farming cycles yet. Click "Run Farming" to start.</p>
+    {% endif %}
+</div>
+{% endblock %}

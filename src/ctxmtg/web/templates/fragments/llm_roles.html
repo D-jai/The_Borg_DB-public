@@ -1,0 +1,56 @@
+<form hx-post="/local/llm-roles/save-all" hx-target="#llm-save-result" hx-swap="innerHTML">
+    <table>
+        <thead>
+            <tr>
+                <th>Role</th>
+                <th>API Key</th>
+                <th>Base URL</th>
+                <th>Model</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for key, role in stage_roles.items() %}
+            {% set cfg = role_configs.get(key, {}) %}
+            <tr>
+                <td>
+                    <strong>{{ role.label }}</strong>
+                    <div style="font-size:0.8rem; color:var(--muted);">{{ role.description }}</div>
+                </td>
+                <td>
+                    <input type="password" name="{{ key }}_api_key"
+                           value="{{ cfg.get('api_key', '') }}"
+                           placeholder="sk-..."
+                           style="width:160px; font-size:0.8rem;">
+                </td>
+                <td>
+                    <input type="text" name="{{ key }}_base_url"
+                           value="{{ cfg.get('base_url', 'https://api.openai.com/v1') or 'https://api.openai.com/v1' }}"
+                           placeholder="https://api.openai.com/v1"
+                           style="width:220px; font-size:0.8rem;">
+                </td>
+                <td>
+                    <input type="text" name="{{ key }}_model"
+                           value="{{ cfg.get('model', 'gpt-4o-mini') or 'gpt-4o-mini' }}"
+                           placeholder="gpt-4o-mini"
+                           style="width:140px; font-size:0.8rem;">
+                </td>
+                <td>
+                    {% if cfg.get('api_key') %}
+                    <span class="badge badge-ok">configured</span>
+                    {% else %}
+                    <span class="badge badge-warn">not set</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="flex mt-1" style="gap:0.5rem;">
+        <button type="submit" class="btn btn-primary btn-sm">
+            Save All to .env
+        </button>
+        <span class="htmx-indicator"><span class="spinner"></span></span>
+    </div>
+</form>
+<div id="llm-save-result" class="mt-1"></div>

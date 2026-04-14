@@ -1,0 +1,23 @@
+{% extends "hive_base.html" %}
+{% block nav %}{% endblock %}
+{% block title %}Setup{% endblock %}
+{% block content %}
+<div style="max-width: 400px; margin: 4rem auto;">
+    <h1>Hive Setup</h1>
+    <p class="text-muted" style="margin-bottom: 1.5rem;">Set an admin password for the Hive Command Center.</p>
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+    <form method="post" action="/setup">
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required minlength="8" placeholder="Minimum 8 characters">
+        </div>
+        <div class="form-group">
+            <label for="confirm">Confirm Password</label>
+            <input type="password" id="confirm" name="confirm" required minlength="8">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Set Password</button>
+    </form>
+</div>
+{% endblock %}

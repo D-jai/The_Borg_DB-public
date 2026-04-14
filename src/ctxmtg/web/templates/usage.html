@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}LLM Usage{% endblock %}
+{% block content %}
+<div class="flex-between">
+    <h1>LLM Usage Stats</h1>
+    <button class="btn btn-secondary btn-sm"
+            hx-get="/usage/stats" hx-target="#stats-container" hx-swap="innerHTML">
+        <span class="htmx-indicator"><span class="spinner"></span></span>
+        Refresh
+    </button>
+</div>
+
+<div id="stats-container">
+    {% include "fragments/usage_stats.html" %}
+</div>
+{% endblock %}

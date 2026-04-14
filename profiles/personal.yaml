@@ -1,0 +1,199 @@
+# ---------------------------------------------------------------
+# Personal Journal Domain Profile
+# ---------------------------------------------------------------
+#
+# This profile is designed for personal use: journaling, self-reflection,
+# life tracking, and personal knowledge management. It emphasizes
+# discovery over precision -- the goal is to surface patterns and
+# connections the user might not notice on their own.
+#
+# Entity types are tailored to personal life: people, emotions, goals,
+# habits, places, events, and topics. The extraction parameters use
+# slightly higher temperature to be more inclusive in what gets captured
+# -- missing a subtle emotional reference is worse than capturing an
+# extra one that can be filtered later.
+#
+# The farming pipeline prioritizes emotional trends, habit tracking,
+# and relationship patterns. It runs weekly (less frequently than
+# professional profiles) with a longer lookback window (60 days) to
+# capture personal patterns that develop over weeks and months.
+#
+# The intake section is very permissive -- personal data is inherently
+# valuable and should rarely be rejected. Only automated system
+# notifications are filtered out.
+#
+# Reference: research/system-prompt-architecture.md (personal domain example)
+# ---------------------------------------------------------------
+
+# Human-readable profile metadata.
+name: "Personal"
+version: "1.0.0"
+description: >-
+  Personal journal profile for self-reflection, life tracking, and
+  personal knowledge management. Discovery-oriented parameters that
+  prioritize finding patterns in emotions, goals, habits, and
+  relationships over strict precision.
+
+# ---------------------------------------------------------------
+# Pipeline stage configurations: discovery-oriented parameters.
+# Higher temperatures encourage broader extraction -- capturing
+# subtle emotional cues and implicit goals that conservative
+# settings would miss.
+# ---------------------------------------------------------------
+stages:
+  extraction:
+    prompt_version: "1.0.0"
+    domain_overlay: >-
+      Extract personal entities with emphasis on emotional context: people
+      in the user's life, emotions expressed, personal goals mentioned,
+      habits described, and meaningful places and events. Be inclusive --
+      capture subtle emotional references and implied goals.
+    params:
+      # Slightly higher temperature for discovery-oriented extraction.
+      # Personal text is often informal and benefits from broader matching.
+      temperature: 0.2
+      top_p: 0.95
+      max_tokens: 1024
+      frequency_penalty: 0.0
+      presence_penalty: 0.0
+      structured_output: true
+
+  query_planning:
+    prompt_version: "1.0.0"
+    domain_overlay: >-
+      Plan queries that help the user explore their personal patterns:
+      emotional trends, relationship dynamics, goal progress, and
+      recurring themes. Temporal queries are especially important.
+    params:
+      temperature: 0.15
+      top_p: 0.9
+      max_tokens: 512
+      frequency_penalty: 0.0
+      presence_penalty: 0.0
+      structured_output: true
+
+  synthesis:
+    prompt_version: "1.0.0"
+    domain_overlay: >-
+      Synthesize personal insights with empathy and nuance. Highlight
+      patterns the user might not have noticed. Use warm, supportive
+      language. Reference specific journal entries and dates. Never
+      make clinical diagnoses or judgments.
+    params:
+      # Higher temperature for more natural, empathetic synthesis.
+      temperature: 0.4
+      top_p: 0.95
+      max_tokens: 2048
+      frequency_penalty: 0.1
+      presence_penalty: 0.1
+      structured_output: false
+
+  farming:
+    prompt_version: "1.0.0"
+    domain_overlay: >-
+      Discover patterns in emotional states, goal progress, habit
+      consistency, and relationship dynamics. Identify positive trends
+      worth reinforcing and concerning patterns worth flagging. Look
+      for seasonal or weekly cycles in mood and productivity.
+    params:
+      # High temperature for creative pattern discovery in personal data.
+      temperature: 0.6
+      top_p: 0.95
+      max_tokens: 2048
+      frequency_penalty: 0.0
+      presence_penalty: 0.0
+      structured_output: false
+
+# ---------------------------------------------------------------
+# NER configuration: personal-domain entity types.
+# Focused on the elements of personal life: people, emotions,
+# goals, habits, places, events, and reflective topics.
+# ---------------------------------------------------------------
+ner:
+  entity_types:
+    - PERSON        # People in the user's life (family, friends, colleagues)
+    - EMOTION       # Emotional states (happy, anxious, grateful, frustrated)
+    - GOAL          # Personal and professional goals
+    - HABIT         # Daily habits, routines, practices
+    - PLACE         # Meaningful locations (home, office, gym, café)
+    - EVENT         # Life events (birthdays, trips, milestones)
+    - TOPIC         # Topics of personal interest or reflection
+    - HEALTH        # Health-related mentions (exercise, sleep, diet)
+
+  custom_patterns:
+    # Common emotion words as entity triggers.
+    - pattern: "\\b(?:happy|sad|anxious|grateful|frustrated|excited|stressed|calm|hopeful|overwhelmed)\\b"
+      entity_type: "EMOTION"
+    # Goal-related phrases: "I want to...", "My goal is..."
+    - pattern: "\\b(?:goal|resolution|aim|aspiration|objective)\\b"
+      entity_type: "GOAL"
+    # Habit-related phrases: "started ...", "routine", "habit"
+    - pattern: "\\b(?:habit|routine|practice|ritual|workout|meditation)\\b"
+      entity_type: "HABIT"
+    # Health-related terms: exercise, sleep, diet, steps
+    - pattern: "\\b(?:exercise|sleep|diet|steps|calories|workout|run|walk|yoga)\\b"
+      entity_type: "HEALTH"
+
+# ---------------------------------------------------------------
+# Farming configuration: personal pattern mining priorities.
+# Longer lookback (60 days) to capture patterns that develop over
+# weeks. Smaller cluster size (3) because personal data volume is
+# typically lower than professional data.
+# ---------------------------------------------------------------
+farming:
+  priority_patterns:
+    - trend            # Emotional and behavioral trends over time
+    - co-occurrence    # Who appears with which emotions or activities
+    - cluster          # Thematic clusters in journal entries
+    - anomaly          # Unusual patterns worth surfacing
+  schedule: "weekly"
+  lookback_window_days: 60
+  cluster_min_size: 3
+
+# ---------------------------------------------------------------
+# Embedding configuration: smaller chunks for personal entries
+# which tend to be shorter and more self-contained than professional
+# documents. More overlap to preserve emotional context at boundaries.
+# ---------------------------------------------------------------
+embedding:
+  preferred_model: "all-MiniLM-L6-v2"
+  fallback_model: "all-MiniLM-L6-v2"
+  chunk_size: 192
+  chunk_overlap: 48
+
+# ---------------------------------------------------------------
+# Intake configuration (Traffic Cop): very permissive for personal
+# data. Almost everything is valuable in a personal context.
+# Only automated system notifications are rejected.
+# ---------------------------------------------------------------
+intake:
+  mode: "rules"
+
+  # Reject only automated system notifications -- everything personal
+  # is potentially valuable for self-reflection and pattern discovery.
+  reject:
+    - sender_pattern: "*@noreply.*"
+    - source_type: "automated_notification"
+
+  # Defer very deep threads (likely mailing list noise).
+  defer:
+    - thread_depth_gt: 20
+
+  # Accept broadly -- personal data is inherently valuable.
+  accept:
+    - sender_in_entities: true
+    - contains_keywords:
+        - "feeling"
+        - "goal"
+        - "grateful"
+        - "today"
+        - "plan"
+        - "hope"
+        - "remember"
+        - "important"
+
+  # Content limits: generous limits for personal content.
+  # Personal entries tend to be shorter, so higher limits are fine.
+  max_attachment_stub: true
+  max_code_block_lines: 0
+  max_inline_content_chars: 15000

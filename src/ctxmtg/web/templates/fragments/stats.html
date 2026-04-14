@@ -1,0 +1,33 @@
+<div class="grid mt-1">
+    <div class="card stat">
+        <div class="value">{{ local.interactions }}</div>
+        <div class="label">Interactions</div>
+    </div>
+    <div class="card stat">
+        <div class="value">{{ local.entities }}</div>
+        <div class="label">Entities</div>
+    </div>
+    <div class="card stat">
+        <div class="value">{{ local.facts }}</div>
+        <div class="label">Facts</div>
+    </div>
+    <div class="card stat">
+        <div class="value">{{ vectors }}</div>
+        <div class="label">Vectors</div>
+    </div>
+    <div class="card stat">
+        <div class="value">{{ local.insights }}</div>
+        <div class="label">Insights</div>
+    </div>
+    {% if hive %}
+    <div class="card stat" style="border-color: var(--accent);">
+        <div class="value">{{ hive.get('interactions', 0) }}</div>
+        <div class="label">Hive Interactions</div>
+    </div>
+    {% else %}
+    <div class="card stat" style="opacity: 0.5;">
+        <div class="value">--</div>
+        <div class="label">Hive (not configured)</div>
+    </div>
+    {% endif %}
+</div>

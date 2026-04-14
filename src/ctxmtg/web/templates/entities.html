@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Entity Resolution{% endblock %}
+{% block content %}
+<div class="flex-between">
+    <h1>Entity Resolution</h1>
+    <button class="btn btn-secondary btn-sm"
+            hx-get="/entities" hx-target="body" hx-swap="innerHTML" hx-push-url="true">
+        Refresh
+    </button>
+</div>
+
+<!-- Stats -->
+<div class="grid mt-2">
+    <div class="card stat">
+        <div class="value">{{ stats.total }}</div>
+        <div class="label">Total Entities</div>
+    </div>
+    <div class="card stat">
+        <div class="value">{{ stats.unique_names }}</div>
+        <div class="label">Unique Names</div>
+    </div>
+    <div class="card stat">
+        <div class="value">{{ stats.type_count }}</div>
+        <div class="label">Entity Types</div>
+    </div>
+</div>
+
+<div id="groups-container">
+    {% include "fragments/entity_groups.html" %}
+</div>
+
+<!-- Near-Duplicate Pairs -->
+{% if pairs %}
+<div class="card mt-2">
+    <h2>Near-Duplicate Pairs</h2>
+    <p style="color:var(--muted); margin-bottom: 1rem;">
+        Entities differing only by case or whitespace.
+    </p>
+    <table>
+        <thead>
+            <tr>
+                <th>Entity A</th>
+                <th>Type</th>
+                <th>Entity B</th>
+                <th>Type</th>
+                <th>Merge To</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in pairs %}
+            <tr id="pair-row-{{ loop.index0 }}">
+                <td>{{ p.name_a }} <span style="color:var(--muted)">({{ "%.2f"|format(p.conf_a) }})</span></td>
+                <td><span class="badge badge-ok">{{ p.type_a }}</span></td>
+                <td>{{ p.name_b }} <span style="color:var(--muted)">({{ "%.2f"|format(p.conf_b) }})</span></td>
+                <td><span class="badge badge-ok">{{ p.type_b }}</span></td>
+                <td>
+                    <select id="pair-canonical-{{ loop.index0 }}" style="width:auto; font-size:0.85rem;">
+                        <option value="{{ p.name_a }}">{{ p.name_a }}</option>
+                        <option value="{{ p.name_b }}">{{ p.name_b }}</option>
+                    </select>
+                </td>
+                <td style="white-space:nowrap;">
+                    <button class="btn btn-primary btn-sm"
+                            hx-post="/entities/merge"
+                            hx-vals='js:{
+                                "canonical_name": document.getElementById("pair-canonical-{{ loop.index0 }}").value,
+                                "entity_ids": "{{ p.id_a }},{{ p.id_b }}"
+                            }'
+                            hx-target="#pair-row-{{ loop.index0 }}"
+                            hx-swap="outerHTML">
+                        Merge
+                    </button>
+                    <button class="btn btn-sm" style="background: var(--error); color: white;"
+                            hx-post="/entities/delete"
+                            hx-vals='{"entity_ids": "{{ p.id_a }},{{ p.id_b }}"}'
+                            hx-target="#pair-row-{{ loop.index0 }}"
+                            hx-swap="outerHTML"
+                            hx-confirm="Delete both &apos;{{ p.name_a }}&apos; and &apos;{{ p.name_b }}&apos;?">
+                        Delete
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

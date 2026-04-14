@@ -1,0 +1,18 @@
+{% extends "hive_base.html" %}
+{% block nav %}{% endblock %}
+{% block title %}Login{% endblock %}
+{% block content %}
+<div style="max-width: 400px; margin: 4rem auto;">
+    <h1>Hive Login</h1>
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+    <form method="post" action="/login">
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required autofocus>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
+    </form>
+</div>
+{% endblock %}

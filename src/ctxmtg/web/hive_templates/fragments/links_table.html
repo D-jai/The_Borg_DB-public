@@ -1,0 +1,44 @@
+{% if links %}
+<table>
+    <thead>
+        <tr>
+            <th>Local Name</th>
+            <th>Outbox Path</th>
+            <th>Last Pulled</th>
+            <th>Batches</th>
+            <th>Notes</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for link in links %}
+        <tr id="link-row-{{ loop.index }}">
+            <td><strong>{{ link.local_name }}</strong></td>
+            <td class="text-muted" style="font-size: 0.8rem;">{{ link.outbox_path }}</td>
+            <td>{{ link.last_pulled_at or "Never" }}</td>
+            <td>{{ link.total_batches }}</td>
+            <td class="text-muted">{{ link.notes or "" }}</td>
+            <td>
+                <div class="flex">
+                    <button class="btn btn-primary btn-sm"
+                            hx-post="/api/links/{{ link.link_id }}/pull"
+                            hx-target="#pull-result"
+                            hx-indicator="#pull-spin-{{ loop.index }}">
+                        Pull <span id="pull-spin-{{ loop.index }}" class="htmx-indicator spinner"></span>
+                    </button>
+                    <button class="btn btn-danger btn-sm"
+                            hx-post="/api/links/{{ link.link_id }}/remove"
+                            hx-target="#links-table"
+                            hx-swap="innerHTML"
+                            hx-confirm="Remove link '{{ link.local_name }}'?">
+                        Remove
+                    </button>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="text-muted mt-1">No linked locals yet. Click "+ Add Link" to connect a local instance.</p>
+{% endif %}

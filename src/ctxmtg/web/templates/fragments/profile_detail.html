@@ -1,0 +1,27 @@
+<table>
+    <tr><th>Name</th><td>{{ profile.name }}</td></tr>
+    <tr><th>Version</th><td>{{ profile.version }}</td></tr>
+    <tr><th>Description</th><td>{{ profile.description or '(none)' }}</td></tr>
+</table>
+
+<h2 class="mt-1" style="font-size: 1rem;">NER Configuration</h2>
+<table>
+    <tr><th>Entity Types</th><td>{{ profile.ner.entity_types | join(', ') or 'All' }}</td></tr>
+    <tr><th>Custom Patterns</th><td>{{ profile.ner.custom_patterns | length }}</td></tr>
+</table>
+
+<h2 class="mt-1" style="font-size: 1rem;">Embedding Configuration</h2>
+<table>
+    <tr><th>Model</th><td>{{ profile.embedding.preferred_model }}</td></tr>
+    <tr><th>Fallback</th><td>{{ profile.embedding.fallback_model }}</td></tr>
+    <tr><th>Chunk Size</th><td>{{ profile.embedding.chunk_size }} tokens</td></tr>
+    <tr><th>Chunk Overlap</th><td>{{ profile.embedding.chunk_overlap }} tokens</td></tr>
+</table>
+
+<h2 class="mt-1" style="font-size: 1rem;">Intake Configuration</h2>
+<table>
+    <tr><th>Mode</th><td>{{ profile.intake.mode }}</td></tr>
+    <tr><th>Reject Rules</th><td>{{ profile.intake.reject | length }}</td></tr>
+    <tr><th>Defer Rules</th><td>{{ profile.intake.defer | length }}</td></tr>
+    <tr><th>Accept Rules</th><td>{{ profile.intake.accept | length }}</td></tr>
+</table>

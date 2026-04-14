@@ -1,0 +1,204 @@
+# ---------------------------------------------------------------
+# Legal Professional Domain Profile
+# ---------------------------------------------------------------
+#
+# This profile is designed for legal professionals: lawyers, paralegals,
+# legal assistants, and compliance officers. It emphasizes precision over
+# recall -- in legal work, a missed entity is usually less harmful than
+# a false positive that could mislead case research.
+#
+# Entity types are tailored to the legal domain: case numbers, courts,
+# judges, parties, statutes, legal instruments, and more. Custom regex
+# patterns catch structured legal references (case citations, statute
+# numbers) that general NER models do not recognize.
+#
+# The extraction stage uses lower temperature (0.05) for maximum
+# determinism -- legal text interpretation must be consistent and
+# reproducible. The farming pipeline prioritizes co-occurrence patterns
+# (which parties appear together across cases) and relationship mapping.
+#
+# The intake section is more restrictive than the general profile:
+# marketing emails and newsletters are rejected, and only interactions
+# containing legal-domain keywords are prioritized for acceptance.
+#
+# Reference: research/system-prompt-architecture.md (legal domain example)
+# ---------------------------------------------------------------
+
+# Human-readable profile metadata.
+name: "Legal"
+version: "1.0.0"
+description: >-
+  Legal professional profile for lawyers, paralegals, and compliance
+  officers. Precision-oriented parameters for accurate entity extraction
+  from case files, depositions, contracts, and legal correspondence.
+
+# ---------------------------------------------------------------
+# Pipeline stage configurations: precision-oriented parameters.
+# Lower temperatures and stricter output modes reduce hallucination
+# risk -- critical in legal contexts where accuracy is paramount.
+# ---------------------------------------------------------------
+stages:
+  extraction:
+    prompt_version: "1.0.0"
+    domain_overlay: >-
+      Extract legal entities with high precision: case numbers, court names,
+      judge names, party names, statute references, and legal instruments.
+      Pay special attention to formal citations and docket numbers.
+      Distinguish between plaintiffs, defendants, and third parties.
+    params:
+      # Very low temperature for maximum precision in legal text.
+      temperature: 0.05
+      top_p: 0.85
+      max_tokens: 1024
+      frequency_penalty: 0.0
+      presence_penalty: 0.0
+      structured_output: true
+
+  query_planning:
+    prompt_version: "1.0.0"
+    domain_overlay: >-
+      Plan queries that focus on case precedents, statute applicability,
+      party relationships, and chronological case timelines. Legal queries
+      often reference formal citations and require exact matching.
+    params:
+      temperature: 0.05
+      top_p: 0.85
+      max_tokens: 512
+      frequency_penalty: 0.0
+      presence_penalty: 0.0
+      structured_output: true
+
+  synthesis:
+    prompt_version: "1.0.0"
+    domain_overlay: >-
+      Synthesize legal research results with citations. Reference specific
+      cases, statutes, and page numbers. Use formal legal language. Never
+      speculate beyond what the source material states.
+    params:
+      # Low temperature even for synthesis -- legal answers must be precise.
+      temperature: 0.15
+      top_p: 0.9
+      max_tokens: 2048
+      frequency_penalty: 0.1
+      presence_penalty: 0.0
+      structured_output: false
+
+  farming:
+    prompt_version: "1.0.0"
+    domain_overlay: >-
+      Discover patterns in case outcomes, judge rulings, party relationships,
+      and statute applicability. Identify recurring legal arguments and
+      precedent chains across cases.
+    params:
+      temperature: 0.3
+      top_p: 0.9
+      max_tokens: 2048
+      frequency_penalty: 0.0
+      presence_penalty: 0.0
+      structured_output: false
+
+# ---------------------------------------------------------------
+# NER configuration: legal-domain entity types and citation patterns.
+# Includes standard entity types (PERSON, ORG) plus legal-specific
+# types (CASE_NUMBER, COURT, JUDGE, PARTY, STATUTE, etc.).
+# ---------------------------------------------------------------
+ner:
+  entity_types:
+    - PERSON        # Individuals mentioned (witnesses, attorneys, etc.)
+    - ORG           # Organizations, law firms, government agencies
+    - CASE_NUMBER   # Docket numbers, case file references
+    - COURT         # Court names (District, Circuit, Supreme, etc.)
+    - JUDGE         # Judge and justice names
+    - PARTY         # Named parties in litigation (plaintiff, defendant)
+    - STATUTE       # Statute references (USC, CFR, state codes)
+    - LEGAL_INSTRUMENT  # Contracts, motions, briefs, orders, opinions
+    - DEADLINE      # Filing deadlines, hearing dates, statute of limitations
+    - DECISION      # Rulings, orders, verdicts, settlements
+    - JURISDICTION  # State, federal, international jurisdictional references
+
+  custom_patterns:
+    # Federal case citations: Smith v. Jones, 123 F.3d 456 (9th Cir. 2020)
+    - pattern: "\\d{1,4}\\s+[A-Z][A-Za-z.]+\\s*\\d{1,4}"
+      entity_type: "CASE_NUMBER"
+    # USC statute references: 42 U.S.C. § 1983
+    - pattern: "\\d{1,3}\\s+U\\.?S\\.?C\\.?\\s*§?\\s*\\d+"
+      entity_type: "STATUTE"
+    # CFR references: 29 C.F.R. § 1910.132
+    - pattern: "\\d{1,3}\\s+C\\.?F\\.?R\\.?\\s*§?\\s*\\d+"
+      entity_type: "STATUTE"
+    # Docket numbers: No. 21-1234, Case No. 2:21-cv-00456
+    - pattern: "(?:No\\.|Case\\s+No\\.)\\s*\\d[:\\-\\d a-z]+"
+      entity_type: "CASE_NUMBER"
+    # State statute format: Cal. Penal Code § 187
+    - pattern: "[A-Z][a-z]+\\.?\\s+(?:Penal|Civ|Rev|Bus)\\S*\\s+Code\\s*§\\s*\\d+"
+      entity_type: "STATUTE"
+
+# ---------------------------------------------------------------
+# Farming configuration: legal-domain pattern mining priorities.
+# Longer lookback window (90 days) because legal cases span months
+# or years. Smaller cluster size (3) because legal cases have fewer
+# but more significant interactions.
+# ---------------------------------------------------------------
+farming:
+  priority_patterns:
+    - co-occurrence    # Which parties appear together
+    - relationship     # Attorney-client, judge-case relationships
+    - trend            # Evolving case law, regulatory changes
+    - cluster          # Groups of related cases or filings
+  schedule: "daily"
+  lookback_window_days: 90
+  cluster_min_size: 3
+
+# ---------------------------------------------------------------
+# Embedding configuration: same model as general, but with larger
+# chunks to preserve legal document context (clauses, paragraphs).
+# Legal text often requires more surrounding context for meaning.
+# ---------------------------------------------------------------
+embedding:
+  preferred_model: "all-MiniLM-L6-v2"
+  fallback_model: "all-MiniLM-L6-v2"
+  chunk_size: 384
+  chunk_overlap: 64
+
+# ---------------------------------------------------------------
+# Intake configuration (Traffic Cop): more restrictive than general.
+# Legal work demands filtering out marketing and administrative noise
+# while preserving all case-related communications.
+# ---------------------------------------------------------------
+intake:
+  mode: "rules"
+
+  # Reject non-legal noise: marketing, newsletters, auto-generated alerts.
+  reject:
+    - sender_pattern: "*@noreply.*"
+    - sender_pattern: "*@marketing.*"
+    - subject_pattern: "Newsletter*"
+    - subject_pattern: "Weekly Digest*"
+    - source_type: "automated_notification"
+
+  # Defer CC-only emails and very deep threads (likely administrative).
+  defer:
+    - cc_only: true
+    - thread_depth_gt: 15
+
+  # Accept interactions from known entities (opposing counsel, judges, etc.)
+  # and those containing legal-domain keywords.
+  accept:
+    - sender_in_entities: true
+    - contains_keywords:
+        - "motion"
+        - "hearing"
+        - "deposition"
+        - "filing"
+        - "deadline"
+        - "ruling"
+        - "settlement"
+        - "discovery"
+        - "subpoena"
+        - "verdict"
+
+  # Content limits: preserve more inline content than general profile
+  # because legal documents tend to be longer and more detailed.
+  max_attachment_stub: true
+  max_code_block_lines: 0
+  max_inline_content_chars: 20000

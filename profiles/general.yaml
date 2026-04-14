@@ -1,0 +1,206 @@
+# ---------------------------------------------------------------
+# General-Purpose Domain Profile
+# ---------------------------------------------------------------
+#
+# This is the default profile for ctxmtg, suitable for engineering
+# teams, meetings, and general professional use. It provides a
+# balanced set of parameters -- not too aggressive (which would
+# produce false positives) and not too conservative (which would
+# miss relevant entities).
+#
+# Entity types cover the most common entities found in professional
+# interactions: people, organizations, projects, topics, tools,
+# deadlines, and decisions. Custom regex patterns catch structured
+# data that spaCy's NER model may miss (dates, version numbers).
+#
+# The intake section uses rules-based filtering to reject automated
+# notifications and defer low-priority threads, while accepting
+# interactions from known entities and those containing priority
+# keywords.
+#
+# Use this profile as a starting point. Copy and customize it for
+# domain-specific verticals (see legal.yaml, personal.yaml).
+# ---------------------------------------------------------------
+
+# Human-readable profile metadata.
+name: "General"
+version: "1.0.0"
+description: >-
+  General-purpose profile for engineering teams, meetings, and
+  professional interactions. Balanced parameters for broad coverage
+  with reasonable precision. Suitable as the default profile.
+
+# ---------------------------------------------------------------
+# Pipeline stage configurations.
+# Each stage (extraction, query_planning, synthesis, farming) can
+# have its own LLM parameters. These are used when a local LLM is
+# available (Tier 2+). In Tier 0-1, extraction uses spaCy + regex.
+# ---------------------------------------------------------------
+stages:
+  extraction:
+    prompt_version: "1.0.0"
+    domain_overlay: >-
+      Focus on extracting people, organizations, projects, tools,
+      deadlines, and key decisions from professional interactions.
+    params:
+      # Low temperature for precise, consistent extraction.
+      temperature: 0.1
+      top_p: 0.9
+      max_tokens: 1024
+      frequency_penalty: 0.0
+      presence_penalty: 0.0
+      # Structured output for machine-parseable extraction results.
+      structured_output: true
+
+  query_planning:
+    prompt_version: "1.0.0"
+    domain_overlay: >-
+      Plan queries that emphasize project timelines, team responsibilities,
+      and decision history.
+    params:
+      temperature: 0.1
+      top_p: 0.9
+      max_tokens: 512
+      frequency_penalty: 0.0
+      presence_penalty: 0.0
+      structured_output: true
+
+  synthesis:
+    prompt_version: "1.0.0"
+    domain_overlay: >-
+      Synthesize answers that highlight actionable information: who is
+      responsible, what was decided, and when things are due.
+    params:
+      # Slightly higher temperature for more natural synthesis.
+      temperature: 0.3
+      top_p: 0.9
+      max_tokens: 2048
+      frequency_penalty: 0.1
+      presence_penalty: 0.1
+      structured_output: false
+
+  farming:
+    prompt_version: "1.0.0"
+    domain_overlay: >-
+      Look for patterns in team collaboration, recurring topics,
+      project evolution, and decision chains.
+    params:
+      # Moderate temperature -- enough creativity for pattern discovery,
+      # low enough to avoid hallucination on 12B models.
+      temperature: 0.3
+      top_p: 0.9
+      max_tokens: 2048
+      frequency_penalty: 0.0
+      presence_penalty: 0.0
+      structured_output: true
+
+# ---------------------------------------------------------------
+# NER configuration: which entity types to extract and any custom
+# regex patterns for structured data that spaCy might miss.
+# ---------------------------------------------------------------
+ner:
+  entity_types:
+    - PERSON        # People mentioned in interactions
+    - ORG           # Organizations, companies, departments
+    - PROJECT       # Project names, codenames
+    - TOPIC         # Discussion topics, technical subjects
+    - TOOL          # Software tools, platforms, frameworks
+    - DEADLINE      # Due dates, milestones, target dates
+    - DECISION      # Decisions made, approvals, rejections
+
+  custom_patterns:
+    # ISO date format: 2026-03-15
+    - pattern: "\\d{4}-\\d{2}-\\d{2}"
+      entity_type: "DEADLINE"
+    # Version numbers: v1.2.3, v2.0, 2.0.0 (must have v prefix OR 3-part number)
+    # ORIGINAL (disabled 2026-04-07): "v?\\d+\\.\\d+(\\.\\d+)?" matched timestamp
+    # fragments like 20.000, 42.000 — created 647 garbage entities (41% of total).
+    - pattern: "(?:v\\d+\\.\\d+(?:\\.\\d+)?|\\d+\\.\\d+\\.\\d+)"
+      entity_type: "TOOL"
+    # Jira-style ticket IDs: PROJ-123
+    - pattern: "[A-Z]{2,10}-\\d{1,6}"
+      entity_type: "PROJECT"
+
+  # Entity rejection filters: entities matching ANY of these rules
+  # are dropped before storage. Applied after NER + regex + merge.
+  entity_filters:
+    min_name_length: 3                # Drop 1-2 char entities (Si, SD, A1)
+    max_name_length: 100              # Drop absurdly long extractions
+    reject_patterns:                  # Regex patterns — drop if full name matches
+      - "^\\d+\\.\\d+$"              # Bare decimal numbers (42.000, 20.000)
+      - "^\\d{1,2}$"                 # Bare 1-2 digit numbers
+      - "^\\+?\\d{2}:\\d{2}$"        # Timezone offsets (+00:00)
+      - "^\\d{4}-\\d{2}-\\d{2}T"     # ISO timestamp fragments
+      - "^\\d+$"                      # Pure integers
+    reject_names:                     # Exact names (case-insensitive) to always reject
+      - "date"
+      - "subject"
+      - "classification"
+      - "tags"
+      - "none"
+      - "from"
+      - "email"
+      - "pi"                          # Fragment from "Raspberry Pi"
+
+# ---------------------------------------------------------------
+# Farming configuration: how the meta-intelligence mining pipeline
+# behaves. The general profile uses balanced settings -- frequent
+# enough to be useful, conservative enough to avoid noise.
+# ---------------------------------------------------------------
+farming:
+  priority_patterns:
+    - co-occurrence   # Who works with whom
+    - trend           # Topics gaining or losing attention
+    - cluster         # Groups of related interactions
+  schedule: "daily"
+  lookback_window_days: 30
+  cluster_min_size: 5
+
+# ---------------------------------------------------------------
+# Embedding configuration: which model to use and how to chunk
+# text for vector embedding. The default model (all-MiniLM-L6-v2)
+# is small (~80MB), fast, and produces good-quality 384-dim vectors.
+# ---------------------------------------------------------------
+embedding:
+  preferred_model: "all-MiniLM-L6-v2"
+  fallback_model: "all-MiniLM-L6-v2"
+  chunk_size: 256
+  chunk_overlap: 32
+
+# ---------------------------------------------------------------
+# Intake configuration (Traffic Cop): rules for classifying and
+# transforming inbound interactions before extraction. Controls
+# what gets accepted, deferred, or rejected.
+# ---------------------------------------------------------------
+intake:
+  mode: "rules"
+
+  # Reject automated notifications and digests -- they add noise
+  # without meaningful knowledge content.
+  reject:
+    - sender_pattern: "*@noreply.*"
+    - subject_pattern: "Weekly Digest*"
+    - source_type: "automated_notification"
+
+  # Defer low-priority items -- they can be processed later when
+  # the system is idle, without blocking high-priority interactions.
+  defer:
+    - cc_only: true
+    - thread_depth_gt: 10
+
+  # Explicitly accept interactions from known entities or those
+  # containing priority keywords (deadlines, decisions, budgets).
+  accept:
+    - sender_in_entities: true
+    - contains_keywords:
+        - "deadline"
+        - "decision"
+        - "budget"
+        - "milestone"
+        - "approved"
+
+  # Content transformation limits: replace heavy content with
+  # metadata stubs to reduce noise and storage requirements.
+  max_attachment_stub: true
+  max_code_block_lines: 0
+  max_inline_content_chars: 10000

@@ -1,0 +1,103 @@
+# ---------------------------------------------------------------
+# ctxmtg Default Configuration
+# ---------------------------------------------------------------
+#
+# This is the default system configuration for ctxmtg. Values here
+# are the lowest priority -- they are overridden by:
+#   1. User config file (~/.ctxmtg/config.yaml)
+#   2. Environment variables (CTXMTG_* prefix)
+#
+# To customize, copy this file to ~/.ctxmtg/config.yaml and edit.
+# See configs/example.yaml for documentation of all options.
+# ---------------------------------------------------------------
+
+# ---------------------------------------------------------------
+# Storage: where the knowledge database and vectors are stored.
+# Paths are expanded (~ becomes the user's home directory).
+# ---------------------------------------------------------------
+storage:
+  # SQLite database for structured data (entities, facts, metadata)
+  db_path: "~/.ctxmtg/knowledge.db"
+  # LanceDB directory for embedding vectors (semantic search)
+  vector_path: "~/.ctxmtg/vectors"
+
+# ---------------------------------------------------------------
+# Extraction: NER and fact extraction settings.
+# ---------------------------------------------------------------
+extraction:
+  # spaCy model for Named Entity Recognition
+  spacy_model: "en_core_web_sm"
+  # Minimum confidence for extracted entities (0.0 to 1.0)
+  ner_confidence_threshold: 0.7
+
+# ---------------------------------------------------------------
+# Embedding: text embedding model and chunking.
+# ---------------------------------------------------------------
+embedding:
+  # ONNX model name (downloaded by scripts/download_models.py)
+  model: "all-MiniLM-L6-v2"
+  # Chunk size in tokens for text splitting
+  chunk_size: 256
+  # Overlap between consecutive chunks (in tokens)
+  chunk_overlap: 32
+
+# ---------------------------------------------------------------
+# Query: hybrid query pipeline settings.
+# ---------------------------------------------------------------
+query:
+  # Default number of results to return
+  top_k: 10
+  # RRF smoothing parameter (see research/round-1/04)
+  rrf_k: 60
+  # Default retrieval mode: "parallel" or "deep"
+  retrieval_mode: "parallel"
+  # Reranker type: "tfidf" | "cross_encoder" | "tiered"
+  reranker: tfidf
+  # Cross-encoder model name (for reference/download)
+  cross_encoder_model: ms-marco-MiniLM-L6-v2
+  # Path to the ONNX cross-encoder model file (null = not available)
+  cross_encoder_model_path: null
+  # Number of TF-IDF candidates passed to cross-encoder in tiered mode
+  tiered_tfidf_top_k: 50
+
+# ---------------------------------------------------------------
+# Farming: meta-intelligence mining schedule.
+# ---------------------------------------------------------------
+farming:
+  # Minimum stored interactions before farming activates
+  min_interactions: 50
+  # Interval between farming cycles (in seconds); 3600 = 1 hour
+  interval: 3600
+
+# ---------------------------------------------------------------
+# Profile: domain profile selection.
+# ---------------------------------------------------------------
+profile:
+  # Active domain profile name (must match a YAML in profiles/)
+  name: "general"
+
+# ---------------------------------------------------------------
+# Hive: cross-instance knowledge aggregation.
+# The hive is always a separate database, even for single-instance
+# deployments.  See research/notes/hive-sync-design.md for details.
+# ---------------------------------------------------------------
+hive:
+  # Mode: "local" (second SQLite file) or "remote" (HTTP, Phase 4)
+  mode: "local"
+  # Path to the hive SQLite database (local mode only)
+  local_db_path: "~/.ctxmtg/hive.db"
+  # Path to the hive vector store (local mode only)
+  local_vector_path: "~/.ctxmtg/hive_vectors"
+  # Minutes between automatic sync cycles
+  sync_interval_minutes: 30
+  # Include raw interaction content in sync payload
+  sync_interaction_content: true
+
+# ---------------------------------------------------------------
+# Server: query server binding (used by `ctxmtg start`).
+# ---------------------------------------------------------------
+server:
+  # Bind address -- localhost only by default for security
+  host: "127.0.0.1"
+  # Port for the query server
+  port: 8080

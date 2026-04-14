@@ -1,0 +1,63 @@
+{% if groups %}
+<div class="card mt-2">
+    <h2>Duplicate Candidates</h2>
+    <p style="color:var(--muted); margin-bottom: 1rem;">
+        Entities with name variants or mixed types across interactions.
+    </p>
+    <table>
+        <thead>
+            <tr>
+                <th>Entity Name</th>
+                <th>Instances</th>
+                <th>Interactions</th>
+                <th>Types</th>
+                <th>Variants</th>
+                <th>Merge To</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for g in groups %}
+            <tr id="grp-row-{{ loop.index0 }}">
+                <td><strong>{{ g.norm_name }}</strong></td>
+                <td>{{ g.instance_count }}</td>
+                <td>{{ g.interaction_count }}</td>
+                <td>{% for t in g.types %}<span class="badge badge-ok">{{ t }}</span> {% endfor %}</td>
+                <td style="font-size:0.85rem; color:var(--muted);">{{ g.variants | join(", ") }}</td>
+                <td>
+                    <select id="grp-canonical-{{ loop.index0 }}" style="width:auto; font-size:0.85rem;">
+                        {% for v in g.variants %}
+                        <option value="{{ v }}">{{ v }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td style="white-space:nowrap;">
+                    <button class="btn btn-primary btn-sm"
+                            hx-post="/entities/merge"
+                            hx-vals='js:{
+                                "canonical_name": document.getElementById("grp-canonical-{{ loop.index0 }}").value,
+                                "entity_ids": "{{ g.entity_ids | join(",") }}"
+                            }'
+                            hx-target="#grp-row-{{ loop.index0 }}"
+                            hx-swap="outerHTML">
+                        Merge
+                    </button>
+                    <button class="btn btn-sm" style="background: var(--error); color: white;"
+                            hx-post="/entities/delete"
+                            hx-vals='{"entity_ids": "{{ g.entity_ids | join(",") }}"}'
+                            hx-target="#grp-row-{{ loop.index0 }}"
+                            hx-swap="outerHTML"
+                            hx-confirm="Delete all {{ g.instance_count }} '{{ g.norm_name }}' entities?">
+                        Delete
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card mt-2">
+    <p style="color: var(--muted);">No duplicate candidates found. All entities are unique.</p>
+</div>
+{% endif %}

@@ -1,0 +1,58 @@
+<table>
+    <thead>
+        <tr>
+            <th>Service</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>HTTP Ingest</strong></td>
+            <td>POST /api/ingest endpoint for programmatic text ingestion</td>
+            <td>
+                {% if http_ingest_enabled %}
+                <span class="badge badge-ok">enabled</span>
+                {% else %}
+                <span class="badge badge-err">disabled</span>
+                {% endif %}
+            </td>
+            <td>
+                <form hx-post="/local/services/toggle" hx-target="#services-result" style="display:inline">
+                    <input type="hidden" name="service" value="http_ingest">
+                    {% if http_ingest_enabled %}
+                    <input type="hidden" name="enabled" value="off">
+                    <button type="submit" class="btn btn-danger btn-sm">Disable</button>
+                    {% else %}
+                    <input type="hidden" name="enabled" value="on">
+                    <button type="submit" class="btn btn-primary btn-sm">Enable</button>
+                    {% endif %}
+                </form>
+            </td>
+        </tr>
+        <tr>
+            <td><strong>Proxy Capture</strong></td>
+            <td>LLM proxy conversation capture (ctxmtg proxy must be running)</td>
+            <td>
+                {% if proxy_capture_enabled %}
+                <span class="badge badge-ok">enabled</span>
+                {% else %}
+                <span class="badge badge-err">disabled</span>
+                {% endif %}
+            </td>
+            <td>
+                <form hx-post="/local/services/toggle" hx-target="#services-result" style="display:inline">
+                    <input type="hidden" name="service" value="proxy_capture">
+                    {% if proxy_capture_enabled %}
+                    <input type="hidden" name="enabled" value="off">
+                    <button type="submit" class="btn btn-danger btn-sm">Disable</button>
+                    {% else %}
+                    <input type="hidden" name="enabled" value="on">
+                    <button type="submit" class="btn btn-primary btn-sm">Enable</button>
+                    {% endif %}
+                </form>
+            </td>
+        </tr>
+    </tbody>
+</table>
