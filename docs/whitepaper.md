@@ -2,7 +2,7 @@
 
 **White Paper v1.1**
 **Aliud Inquisito Inc.**
-**April 2024**
+**April 2026**
 
 ---
 
