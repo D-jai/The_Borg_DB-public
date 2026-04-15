@@ -8,7 +8,7 @@
 
 ## Abstract
 
-This paper presents The_Borg_DB, a local-first knowledge intelligence system that extracts structured knowledge from unstructured text, stores it in a dual SQL + vector architecture, answers hybrid queries through four distinct retrieval modes, and continuously mines accumulated data for higher-order patterns through a 18-stage farming pipeline. Unlike cloud-dependent AI memory systems, The_Borg_DB runs entirely on user-controlled hardware -- from a $50 Raspberry Pi to enterprise servers -- ensuring complete data sovereignty. A cross-device aggregation layer (the hive-collective) enables multi-instance intelligence discovery without transmitting raw data. The system is designed for regulated industries (healthcare, finance, defense, legal) where cloud processing of sensitive data is legally or operationally prohibitive.
+This paper presents The_Borg_DB, a local-first knowledge intelligence system that extracts structured knowledge from unstructured text, stores it in a dual SQL + vector architecture, answers hybrid queries through four distinct retrieval modes, and continuously mines accumulated data for higher-order patterns through a 18-stage farming pipeline. Unlike cloud-dependent AI memory systems, The_Borg_DB runs entirely on user-controlled hardware -- from a $200 Raspberry Pi to enterprise servers -- ensuring complete data sovereignty. A cross-device aggregation layer (the hive-collective) enables multi-instance intelligence discovery without transmitting raw data. The system is designed for regulated industries (healthcare, finance, defense, legal) where cloud processing of sensitive data is legally or operationally prohibitive.
 
 ---
 
@@ -339,7 +339,7 @@ The hive-collective never pulls raw data from devices. Devices push distilled pr
 
 ### 9.1 Per-Role API Configuration
 
-The_Borg_DB uses LLMs via API keys for six pipeline roles, each independently configurable:
+The_Borg_DB uses Local LLMs for six pipeline roles, each independently configurable:
 
 | Role | Function | Recommended model class |
 |------|----------|------------------------|
@@ -350,7 +350,7 @@ The_Borg_DB uses LLMs via API keys for six pipeline roles, each independently co
 | Farming | Generate insight descriptions | 12B+ |
 | Fusion | Rerank results by relevance | 12B+ |
 
-Each role can use a different provider, model, and API key. Configuration is managed through a web UI or environment variables, stored in a local `.env` file.
+Each role can use a different provider, model, and API key (if choosen). Configuration is managed through a web UI or environment variables, stored in a local `.env` file.
 
 ### 9.2 Usage Tracking
 
@@ -424,15 +424,13 @@ Switching profiles is instantaneous -- a single configuration change. The extrac
 
 Left Blank purposely.
 
-### 13.1 Strategic Moat
-
-The competitive moat has three layers:
+### 13.1 Strategic xxxx
 
 1. **Architectural** -- Dual-store + four retrieval modes + farming pipeline is a fundamentally different architecture from single-store RAG. Competitors cannot add this without a complete rewrite.
 
 2. **Regulatory** -- The_Borg_DB is the only system that can operate in HIPAA, SOX, ITAR, and FERPA environments without compliance exceptions. This is not a feature -- it is a market category.
 
-3. **Compounding intelligence** -- The farming pipeline means The_Borg_DB improves overnight. Every day of data accumulation produces richer insights. Competitors offer static retrieval that does not compound.
+3. **Compounding intelligence** -- The farming pipeline means The_Borg_DB improves overtime. Every day of data accumulation produces richer insights. Other options do not compound.
 
 ---
 
@@ -440,18 +438,9 @@ The competitive moat has three layers:
 
 ### 14.1 Total Addressable Market
 
-The largest sectors for AI knowledge management are precisely the ones locked out of cloud solutions:
+Left Blank purposely.
 
-| Sector | Market Size | Cloud AI Barrier |
-|--------|-----------|-----------------|
-| Healthcare | $4.5T | HIPAA Privacy Rule |
-| Financial Services | $2.1T | SOX, GDPR, MNPI |
-| Defense & Intelligence | $800B+ | Classified data, air-gap requirements |
-| Legal | $900B | Attorney-client privilege |
-| Manufacturing | $2.3T | Trade secrets, ITAR |
-| Education | $1.5T | FERPA student privacy |
-
-Combined, these sectors represent over $12 trillion in economic activity with active demand for AI knowledge tools and a legal prohibition or concern on using cloud-based solutions.
+Combined, these sectors represent over $2 trillion in economic activity with active demand for AI knowledge tools and a prohibitive concern on using cloud-based solutions.
 
 ### 14.2 Go-to-Market Strategy
 
@@ -467,7 +456,7 @@ Combined, these sectors represent over $12 trillion in economic activity with ac
 
 The_Borg_DB represents a fundamental rethinking of how AI knowledge systems should work. Instead of sending sensitive data to cloud APIs, the model runs where the data lives. Instead of storing knowledge as text chunks, the system extracts structured facts. Instead of offering one retrieval path, it offers four, each optimized for different query types. Instead of waiting for user queries, a 18-stage farming pipeline continuously discovers patterns. Instead of siloing knowledge on individual devices, a privacy-preserving hive-collective aggregates intelligence across instances.
 
-The result is a system that is simultaneously more private, more precise, more scalable, and more intelligent than any cloud-dependent alternative. It gets smarter every night while the user sleeps. It operates on a $50 Raspberry Pi or a $50,000 server. It adapts to 16 industry verticals with a configuration change.
+The result is a system that is simultaneously more private, more precise, more scalable, and more intelligent than any cloud-dependent alternative. It gets smarter every night while the user sleeps. It operates on a $200 Raspberry Pi or a $50,000 server. It adapts to multiple industry verticals with just one configuration change.
 
 The knowledge you already have -- in your meetings, emails, documents, and conversations -- is enormously valuable. Most tools let you search it. The_Borg_DB learns from it.
 
@@ -481,4 +470,4 @@ https://github.com/D-jai/The_Borg_DB
 
 ---
 
-*Copyright (c) 2024 Aliud Inquisito Inc. The_Borg_DB is distributed under the Business Source License 1.1. See [LICENSE](../LICENSE) and [NOTICE](../NOTICE).*
+*Copyright (c) 2026 Aliud Inquisito Inc. The_Borg_DB is distributed under the Business Source License 1.1. See [LICENSE](../LICENSE) and [NOTICE](../NOTICE).*
