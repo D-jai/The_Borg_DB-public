@@ -190,13 +190,16 @@ CREATE_META_INSIGHTS = """\
 CREATE TABLE IF NOT EXISTS meta_insights (
     id              TEXT PRIMARY KEY,
     insight_type    TEXT NOT NULL CHECK(insight_type IN (
-        'cluster','trend','anomaly','relationship'
+        'cluster','trend','anomaly','relationship',
+        'causal','consolidation','supersession','verification',
+        'gap','archive','topic','meta'
     )),
     title           TEXT NOT NULL,
     description     TEXT,
     evidence        TEXT DEFAULT '[]',                    -- JSON array of source IDs
     confidence      REAL NOT NULL DEFAULT 1.0 CHECK(confidence BETWEEN 0.0 AND 1.0),
     parameters      TEXT DEFAULT '{}',                    -- JSON: algorithm, hyperparams
+    entity_ids      TEXT DEFAULT '[]',                    -- JSON array of linked entity IDs (v3)
     created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
     expires_at      TEXT                                  -- NULL = never expires
 );
@@ -205,6 +208,8 @@ CREATE TABLE IF NOT EXISTS meta_insights (
 CREATE_META_INSIGHTS_INDEXES = """\
 CREATE INDEX IF NOT EXISTS idx_meta_insights_type
     ON meta_insights(insight_type);
+CREATE INDEX IF NOT EXISTS idx_meta_insights_created
+    ON meta_insights(created_at);
 """
 
 # -----------------------------------------------------------------
@@ -270,6 +275,226 @@ CREATE TRIGGER IF NOT EXISTS interactions_au AFTER UPDATE ON interactions BEGIN
 END;
 """
 
+# -----------------------------------------------------------------
+# Phase 3+ tables -- farming pipeline, maintenance agents, hive
+# pull progress, distiller, query quality log.
+#
+# These mirror the table definitions in MIGRATIONS v3 and v4 but
+# live here so fresh installs (where the migration runner is
+# short-circuited by the version-stamping logic in apply_schema)
+# still get the full schema. The IF NOT EXISTS guards keep the
+# migration path idempotent for existing databases.
+# -----------------------------------------------------------------
+
+# farming_cycles: one row per farming pipeline run.
+CREATE_FARMING_CYCLES = """\
+CREATE TABLE IF NOT EXISTS farming_cycles (
+    cycle_id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    started_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    completed_at    TEXT,
+    status          TEXT NOT NULL CHECK(status IN ('running','completed','partial','failed')),
+    trigger         TEXT,
+    stages_done     INTEGER DEFAULT 0
+);
+"""
+
+# farming_checkpoints: per-stage progress within a cycle.
+CREATE_FARMING_CHECKPOINTS = """\
+CREATE TABLE IF NOT EXISTS farming_checkpoints (
+    cycle_id        INTEGER NOT NULL,
+    stage           TEXT NOT NULL,
+    status          TEXT NOT NULL CHECK(status IN ('running','completed','failed')),
+    started_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    completed_at    TEXT,
+    items_processed INTEGER DEFAULT 0,
+    items_total     INTEGER DEFAULT 0,
+    state_blob      BLOB,
+    error_message   TEXT,
+    PRIMARY KEY (cycle_id, stage)
+);
+"""
+
+# farming_progress: per-stage progressive scan offsets.
+# Added 2026-04-07 by Post-Installation #17. Without this table the
+# farming stages would always re-process the same top N records.
+CREATE_FARMING_PROGRESS = """\
+CREATE TABLE IF NOT EXISTS farming_progress (
+    stage            TEXT PRIMARY KEY,
+    last_offset      INTEGER NOT NULL DEFAULT 0,
+    total_processed  INTEGER NOT NULL DEFAULT 0,
+    updated_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+"""
+
+# query_quality_log: self-learning feedback loop.
+CREATE_QUERY_QUALITY_LOG = """\
+CREATE TABLE IF NOT EXISTS query_quality_log (
+    id                  TEXT PRIMARY KEY,
+    query_text          TEXT NOT NULL,
+    mode                TEXT,
+    result_ids          TEXT DEFAULT '[]',
+    sql_result_count    INTEGER DEFAULT 0,
+    vector_result_count INTEGER DEFAULT 0,
+    latency_ms          REAL,
+    refined_within_60s  INTEGER DEFAULT 0,
+    created_at          TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+"""
+
+# Index on facts.predicate for the relationship-analysis stage.
+CREATE_FACTS_PREDICATE_INDEX = """\
+CREATE INDEX IF NOT EXISTS idx_facts_predicate ON facts(predicate);
+"""
+
+# Maintenance agent log tables -- one per agent, all share the
+# same schema. Each row records an action taken during a cycle.
+CREATE_MAINTENANCE_LOGS = """\
+CREATE TABLE IF NOT EXISTS maintenance_consolidator (
+    id              TEXT PRIMARY KEY,
+    cycle_id        INTEGER NOT NULL,
+    action          TEXT NOT NULL,
+    target_ids      TEXT NOT NULL,
+    canonical_id    TEXT,
+    detail          TEXT,
+    created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+CREATE TABLE IF NOT EXISTS maintenance_pruner (
+    id              TEXT PRIMARY KEY,
+    cycle_id        INTEGER NOT NULL,
+    action          TEXT NOT NULL,
+    target_ids      TEXT NOT NULL,
+    canonical_id    TEXT,
+    detail          TEXT,
+    created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+CREATE TABLE IF NOT EXISTS maintenance_verifier (
+    id              TEXT PRIMARY KEY,
+    cycle_id        INTEGER NOT NULL,
+    action          TEXT NOT NULL,
+    target_ids      TEXT NOT NULL,
+    canonical_id    TEXT,
+    detail          TEXT,
+    created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+CREATE TABLE IF NOT EXISTS maintenance_completionist (
+    id              TEXT PRIMARY KEY,
+    cycle_id        INTEGER NOT NULL,
+    action          TEXT NOT NULL,
+    target_ids      TEXT NOT NULL,
+    canonical_id    TEXT,
+    detail          TEXT,
+    created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+CREATE TABLE IF NOT EXISTS maintenance_linker (
+    id              TEXT PRIMARY KEY,
+    cycle_id        INTEGER NOT NULL,
+    action          TEXT NOT NULL,
+    target_ids      TEXT NOT NULL,
+    canonical_id    TEXT,
+    detail          TEXT,
+    created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+CREATE TABLE IF NOT EXISTS maintenance_archivist (
+    id              TEXT PRIMARY KEY,
+    cycle_id        INTEGER NOT NULL,
+    action          TEXT NOT NULL,
+    target_ids      TEXT NOT NULL,
+    canonical_id    TEXT,
+    detail          TEXT,
+    created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+CREATE TABLE IF NOT EXISTS maintenance_defragmenter (
+    id              TEXT PRIMARY KEY,
+    cycle_id        INTEGER NOT NULL,
+    action          TEXT NOT NULL,
+    target_ids      TEXT NOT NULL,
+    canonical_id    TEXT,
+    detail          TEXT,
+    created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+CREATE TABLE IF NOT EXISTS maintenance_rationalizer (
+    id              TEXT PRIMARY KEY,
+    cycle_id        INTEGER NOT NULL,
+    action          TEXT NOT NULL,
+    target_ids      TEXT NOT NULL,
+    canonical_id    TEXT,
+    detail          TEXT,
+    created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+"""
+
+# farming_clustering_progress: resumable clustering state.
+CREATE_FARMING_CLUSTERING_PROGRESS = """\
+CREATE TABLE IF NOT EXISTS farming_clustering_progress (
+    id              TEXT PRIMARY KEY,
+    cycle_id        INTEGER NOT NULL,
+    last_entity     TEXT NOT NULL,
+    entities_done   INTEGER NOT NULL,
+    batch_size      INTEGER NOT NULL,
+    completed_at    TEXT NOT NULL
+);
+"""
+
+# entity_interactions: many-to-many junction between entities and interactions.
+CREATE_ENTITY_INTERACTIONS = """\
+CREATE TABLE IF NOT EXISTS entity_interactions (
+    entity_id       TEXT NOT NULL,
+    interaction_id  TEXT NOT NULL,
+    PRIMARY KEY (entity_id, interaction_id)
+);
+"""
+
+# hive_pull_progress: per-table cursors for incremental hive sync.
+CREATE_HIVE_PULL_PROGRESS = """\
+CREATE TABLE IF NOT EXISTS hive_pull_progress (
+    table_name      TEXT PRIMARY KEY,
+    last_pulled_at  TEXT NOT NULL,
+    last_row_id     TEXT,
+    records_pulled  INTEGER DEFAULT 0
+);
+"""
+
+# distiller_summaries: per-entity distilled intelligence (v4).
+CREATE_DISTILLER_SUMMARIES = """\
+CREATE TABLE IF NOT EXISTS distiller_summaries (
+    entity_name       TEXT PRIMARY KEY,
+    entity_type       TEXT NOT NULL,
+    summary           TEXT NOT NULL,
+    source_instances  TEXT NOT NULL DEFAULT '[]',
+    top_co_entities   TEXT NOT NULL DEFAULT '[]',
+    top_predicates    TEXT NOT NULL DEFAULT '[]',
+    relevance_score   REAL NOT NULL DEFAULT 0.0,
+    updated_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    cycle_id          INTEGER NOT NULL DEFAULT 0
+);
+"""
+
+CREATE_DISTILLER_RELEVANCE_INDEX = """\
+CREATE INDEX IF NOT EXISTS idx_distiller_relevance
+    ON distiller_summaries(relevance_score DESC);
+"""
+
+# local_intelligence_cache: cross-instance hints pulled from the hive.
+CREATE_LOCAL_INTELLIGENCE_CACHE = """\
+CREATE TABLE IF NOT EXISTS local_intelligence_cache (
+    entity_name       TEXT PRIMARY KEY,
+    entity_type       TEXT NOT NULL,
+    summary           TEXT NOT NULL,
+    top_co_entities   TEXT NOT NULL DEFAULT '[]',
+    top_predicates    TEXT NOT NULL DEFAULT '[]',
+    relevance_score   REAL NOT NULL DEFAULT 0.0,
+    source_instances  TEXT NOT NULL DEFAULT '[]',
+    fetched_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+"""
+
 # =====================================================================
 # ALL_DDL: a list of every DDL string in dependency order.
 # Tables must be created before their foreign-key dependents, and
@@ -282,6 +507,7 @@ ALL_DDL: list[str] = [
     CREATE_ENTITIES_INDEXES,
     CREATE_FACTS,
     CREATE_FACTS_INDEXES,
+    CREATE_FACTS_PREDICATE_INDEX,
     CREATE_EMBEDDINGS_METADATA,
     CREATE_EMBEDDINGS_METADATA_INDEXES,
     CREATE_META_INSIGHTS,
@@ -290,6 +516,18 @@ ALL_DDL: list[str] = [
     CREATE_SYNC_LOG_INDEXES,
     CREATE_FTS,
     CREATE_FTS_TRIGGERS,
+    # Phase 3+ tables (v3, v4)
+    CREATE_FARMING_CYCLES,
+    CREATE_FARMING_CHECKPOINTS,
+    CREATE_FARMING_PROGRESS,
+    CREATE_QUERY_QUALITY_LOG,
+    CREATE_MAINTENANCE_LOGS,
+    CREATE_FARMING_CLUSTERING_PROGRESS,
+    CREATE_ENTITY_INTERACTIONS,
+    CREATE_HIVE_PULL_PROGRESS,
+    CREATE_DISTILLER_SUMMARIES,
+    CREATE_DISTILLER_RELEVANCE_INDEX,
+    CREATE_LOCAL_INTELLIGENCE_CACHE,
     # LLM usage tracking (v5)
     """CREATE TABLE IF NOT EXISTS llm_usage (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,

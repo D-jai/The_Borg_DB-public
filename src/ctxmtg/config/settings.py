@@ -33,6 +33,8 @@ import structlog
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
 
+from ctxmtg import paths
+
 # ---------------------------------------------------------------
 # Module-level logger.
 # ---------------------------------------------------------------
@@ -66,13 +68,13 @@ class HiveSettings(BaseModel):
 
     # Local-mode path to the hive SQLite database file
     local_db_path: str = Field(
-        default="~/.ctxmtg/hive.db",
+        default_factory=lambda: str(paths.get_hive_db_path()),
         description="Path to the hive SQLite database (local mode)",
     )
 
     # Local-mode path to the hive vector store directory
     local_vector_path: str = Field(
-        default="~/.ctxmtg/hive_vectors",
+        default_factory=lambda: str(paths.get_hive_vector_path()),
         description="Path to the hive vector store (local mode)",
     )
 
@@ -101,7 +103,7 @@ class HiveSettings(BaseModel):
 
     # Directory where this local writes outbox manifests for hive pull
     outbox_path: str = Field(
-        default="~/.ctxmtg/outbox",
+        default_factory=lambda: str(paths.get_outbox_path()),
         description="Directory for outbox manifest files (hive pulls from here)",
     )
 
@@ -162,13 +164,13 @@ class CtxMtgSettings(BaseSettings):
 
     # Path to the SQLite knowledge database file
     db_path: str = Field(
-        default="~/.ctxmtg/knowledge.db",
+        default_factory=lambda: str(paths.get_db_path()),
         description="Path to the SQLite database file",
     )
 
     # Directory for the LanceDB vector store
     vector_path: str = Field(
-        default="~/.ctxmtg/vectors",
+        default_factory=lambda: str(paths.get_vector_path()),
         description="Directory for vector store data",
     )
 
@@ -229,12 +231,12 @@ class CtxMtgSettings(BaseSettings):
     # ---------------------------------------------------------------
 
     inbox_path: str = Field(
-        default="~/.ctxmtg/inbox",
+        default_factory=lambda: str(paths.get_inbox_path()),
         description="Directory to watch for new files to ingest",
     )
 
     processed_path: str = Field(
-        default="~/.ctxmtg/processed",
+        default_factory=lambda: str(paths.get_processed_path()),
         description="Directory where successfully ingested files are moved",
     )
 
@@ -306,7 +308,7 @@ class CtxMtgSettings(BaseSettings):
     # ---------------------------------------------------------------
     model_config = {
         "env_prefix": "CTXMTG_",
-        "env_file": str(Path("~/.ctxmtg/.env").expanduser()),
+        "env_file": str(paths.get_env_file_path()),
         "env_file_encoding": "utf-8",
         "env_nested_delimiter": "__",
     }

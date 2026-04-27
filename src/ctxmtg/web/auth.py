@@ -6,7 +6,8 @@ Authentication Module
 
 Provides bcrypt-based password hashing and session cookie management
 for the web command center. A single admin password is set on first
-run and stored as a bcrypt hash in ~/.ctxmtg/web_auth.json.
+run and stored as a bcrypt hash in ``<runtime_root>/web_auth.json``
+(see ``ctxmtg.paths.get_web_auth_path``).
 
 Security model:
     - localhost only (no network exposure)
@@ -34,6 +35,8 @@ from pathlib import Path
 import bcrypt
 import structlog
 
+from ctxmtg import paths
+
 logger = structlog.get_logger("ctxmtg.web.auth")
 
 # Session expiry: 24 hours in seconds.
@@ -45,7 +48,7 @@ _sessions: dict[str, float] = {}
 
 def _auth_file() -> Path:
     """Path to the bcrypt hash file."""
-    return Path("~/.ctxmtg/web_auth.json").expanduser()
+    return paths.get_web_auth_path()
 
 
 def is_password_set() -> bool:

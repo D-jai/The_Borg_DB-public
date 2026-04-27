@@ -8,8 +8,8 @@ Logs query answers and provides an LLM-powered evaluation command
 that compares local vs hive answers.
 
 P5-10: Every ``ctxmtg query`` logs the question, results, synthesis,
-mode, and latency to ``~/.ctxmtg/evaluations/{timestamp}_{hash}/
-local_answer.json``.
+mode, and latency to ``<runtime_root>/evaluations/{timestamp}_{hash}/
+local_answer.json`` (see ``ctxmtg.paths.get_eval_dir``).
 
 P5-12: ``ctxmtg evaluate`` reads a logged evaluation folder, feeds
 local answer + hive answer + meta insights to an LLM for comparison.
@@ -35,16 +35,15 @@ from typing import Any
 
 import structlog
 
+from ctxmtg import paths
 from ctxmtg.models.query import QueryResult
 
 logger = structlog.get_logger("ctxmtg.query.evaluation")
 
-DEFAULT_EVAL_DIR = "~/.ctxmtg/evaluations"
-
 
 def get_eval_dir(base_dir: str | None = None) -> Path:
     """Return the evaluations directory, creating it if needed."""
-    path = Path(base_dir or DEFAULT_EVAL_DIR).expanduser()
+    path = Path(base_dir).expanduser() if base_dir else paths.get_eval_dir()
     path.mkdir(parents=True, exist_ok=True)
     return path
 

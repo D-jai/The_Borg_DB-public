@@ -5,6 +5,89 @@ All notable changes to The_Borg_DB will be documented in this file.
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] — 2026-04-27
+
+Project-local runtime layout and a fresh-install schema bug fix. Both
+changes are surface-only: existing installations continue to work without
+data migration.
+
+### Added
+
+- **`src/ctxmtg/paths.py`** — single source of truth for every runtime
+  artifact's filesystem location. Resolves to `<project_root>/.runtime/`
+  by default; override the entire root with the `CTXMTG_DATA_ROOT`
+  environment variable. Each clone of the source tree gets a cleanly
+  separated runtime store out of the box, supporting multi-instance
+  deployments (Local_Tickets / Local_Emails / Hive) on the same machine
+  without `CTXMTG_HOME` gymnastics.
+
+### Changed
+
+- **Runtime data root** — moved from `~/.ctxmtg/` to
+  `<project_root>/.runtime/`. Affected files: SQLite knowledge database,
+  LanceDB vector store, hive database + vectors, inbox/processed/outbox
+  directories, `.env` file, `web_auth.json`, `hive_web_auth.json`,
+  `archive.db`, evaluation snapshots. `~/.ctxmtg/` is no longer touched.
+- **`config/settings.py`** — every path field now uses a `default_factory`
+  pointing at the matching `paths.get_*()` helper. YAML / env-var
+  overrides still win.
+- **`config/env_file.py`** — drops the module-level `ENV_PATH` constant in
+  favour of `paths.get_env_file_path()` evaluated at call time, so
+  `CTXMTG_DATA_ROOT` overrides take effect even after import.
+- **`web/auth.py`, `web/hive_auth.py`** — `_auth_file()` now returns
+  `paths.get_web_auth_path()` / `paths.get_hive_web_auth_path()`.
+- **`farming/__init__.py`** — `archive.db` derivation no longer reads the
+  `CTXMTG_HOME` environment variable. `CTXMTG_DB_PATH` still wins for
+  custom multi-instance setups; otherwise the file lands at
+  `<runtime_root>/archive.db`.
+- **`query/evaluation.py`** — `DEFAULT_EVAL_DIR` constant removed.
+  `get_eval_dir()` falls through to `paths.get_eval_dir()`.
+- **`constants.py`** — `DEFAULT_DATA_DIR`, `DEFAULT_DB_PATH`,
+  `DEFAULT_VECTOR_PATH`, `DEFAULT_PROFILE_DIR` removed (none were
+  imported by any module). `paths.py` is the single source of truth now.
+- **`configs/default.yaml`** — `storage.db_path`, `storage.vector_path`,
+  `hive.local_db_path`, `hive.local_vector_path` now default to empty
+  strings; the runtime resolver fills them in. Set them only to override.
+- **`.env.example`** — documents the new `CTXMTG_DATA_ROOT` knob.
+- **`.gitignore`** — adds `.runtime/` and `.venv/`.
+
+### Fixed
+
+- **Fresh-install schema gaps (P0)** — `apply_schema()` stamped fresh
+  databases with `PRAGMA user_version = SCHEMA_VERSION (=5)` immediately
+  after running `ALL_DDL`, which short-circuited `migrate()` and skipped
+  every v3 / v4 / v5 migration on a clean install. Net effect: the
+  farming pipeline did not run end-to-end on a freshly cloned repository
+  because `farming_cycles`, `farming_checkpoints`, `farming_progress`,
+  `query_quality_log`, all `maintenance_*` tables, `distiller_summaries`,
+  `local_intelligence_cache`, `farming_clustering_progress`,
+  `entity_interactions`, and `hive_pull_progress` were never created.
+  `ALL_DDL` is now the complete v5 schema. The migration list is
+  unchanged so existing v1 / v2 / v3 / v4 databases still upgrade
+  through the same paths.
+- **`CREATE_META_INSIGHTS` CHECK constraint** — was the original 4-type
+  list (`cluster, trend, anomaly, relationship`) on fresh installs, so
+  any insight typed as `causal`, `consolidation`, `verification`, etc.
+  would have been rejected before reaching disk. Now the full 12-type
+  v3 schema with the `entity_ids` column.
+- **`farming_progress` table** — referenced by `farming/progress.py`
+  (Post-Install fix from 2026-04-07) but had no `CREATE TABLE`
+  statement anywhere in the codebase. Now declared in `schema.py`
+  alongside the other Phase 3 tables.
+- **`idx_meta_insights_created`** — referenced by the v3 migration but
+  absent from `ALL_DDL`. Added.
+
+### Migration notes
+
+- **Existing `~/.ctxmtg/` installations:** your data is untouched. To
+  carry it forward, copy the directory contents to
+  `<project_root>/.runtime/` (or set `CTXMTG_DATA_ROOT` to the old
+  `~/.ctxmtg` path).
+- **Multi-instance setups:** `CTXMTG_HOME` is no longer read by
+  `farming/__init__.py`. Use `CTXMTG_DATA_ROOT` instead, or
+  `CTXMTG_DB_PATH` for the legacy archive-next-to-knowledge.db
+  arrangement.
+
 ## [0.7.0] — 2024-04-13
 
 First public source-available release under the Business Source License 1.1.

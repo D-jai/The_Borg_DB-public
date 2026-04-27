@@ -56,10 +56,11 @@ class HealthMonitor:
     - Intake statistics (from the Traffic Cop gateway)
 
     Usage:
+        from ctxmtg import paths
         monitor = HealthMonitor(
             sql_store=sqlite_store,
             vector_store=lancedb_store,
-            db_path=Path("~/.ctxmtg/knowledge.db"),
+            db_path=paths.get_db_path(),
         )
         health = monitor.get_health()
         # health = {"ram_mb": 45.2, "db_size_mb": 12.5, ...}

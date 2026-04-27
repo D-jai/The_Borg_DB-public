@@ -10,12 +10,14 @@ throughout the codebase and makes it easy to tune system behavior
 from one place.
 
 Constants are grouped by subsystem:
-    - Storage: database paths, batch sizes, limits
+    - Storage: batch sizes, limits
     - Extraction: NER confidence thresholds, model names
     - Embedding: model identifiers, vector dimensions, chunk sizes
     - Query: fusion parameters, result limits
     - Farming: scheduling intervals, minimum data thresholds
-    - General: application metadata, default paths
+    - General: application metadata
+
+Runtime filesystem paths live in ``ctxmtg.paths``, not here.
 
 Depends on: nothing (leaf module)
 Used by: virtually every other module in ctxmtg
@@ -25,25 +27,16 @@ Used by: virtually every other module in ctxmtg
 # Application metadata
 # ---------------------------------------------------------------
 
-# The application name, used in CLI output, log prefixes, and
-# configuration file paths (~/.ctxmtg/).
+# The application name, used in CLI output and log prefixes.
 APP_NAME = "ctxmtg"
 
-# Default directory for user data (databases, vectors, profiles).
-# On first run, the system creates this directory if it doesn't exist.
-DEFAULT_DATA_DIR = "~/.ctxmtg"
+# NOTE: Runtime artifact paths (data root, db, vectors, inbox,
+# outbox, etc.) live in ``ctxmtg.paths``. Default location is
+# ``<project_root>/.runtime/``; override with ``CTXMTG_DATA_ROOT``.
 
 # ---------------------------------------------------------------
 # Storage constants
 # ---------------------------------------------------------------
-
-# Default file path for the SQLite knowledge database.
-# This stores all structured data: interactions, entities, facts.
-DEFAULT_DB_PATH = "~/.ctxmtg/knowledge.db"
-
-# Default directory for the LanceDB vector store.
-# This stores embedding vectors for semantic search.
-DEFAULT_VECTOR_PATH = "~/.ctxmtg/vectors"
 
 # Maximum number of records to insert in a single database
 # transaction. Larger batches are faster but use more memory.
@@ -137,5 +130,5 @@ DEFAULT_LLM_CONTEXT_SIZE = 4096
 # Default domain profile name, loaded when no profile is specified.
 DEFAULT_PROFILE_NAME = "general"
 
-# Default directory where domain profile YAML files are stored.
-DEFAULT_PROFILE_DIR = "~/.ctxmtg/profiles"
+# Default directory for user-installed domain profile YAML files
+# is resolved by ``ctxmtg.paths.get_profile_dir`` at runtime.

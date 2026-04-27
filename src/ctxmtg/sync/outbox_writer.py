@@ -61,8 +61,9 @@ class OutboxWriter:
     so the hive needs zero transformation.
 
     Usage:
+        from ctxmtg import paths
         writer = OutboxWriter(
-            outbox_path=Path("~/.ctxmtg/outbox").expanduser(),
+            outbox_path=paths.get_outbox_path(),
             instance_name="tickets",
         )
         manifest_path = writer.write_manifest(

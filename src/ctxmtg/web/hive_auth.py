@@ -21,6 +21,8 @@ from pathlib import Path
 import bcrypt
 import structlog
 
+from ctxmtg import paths
+
 logger = structlog.get_logger("ctxmtg.web.hive_auth")
 
 SESSION_MAX_AGE = 86400
@@ -30,7 +32,7 @@ _sessions: dict[str, float] = {}
 
 def _auth_file() -> Path:
     """Path to the hive bcrypt hash file (separate from local)."""
-    return Path("~/.ctxmtg/hive_web_auth.json").expanduser()
+    return paths.get_hive_web_auth_path()
 
 
 def is_password_set() -> bool:

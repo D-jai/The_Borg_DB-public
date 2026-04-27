@@ -4,22 +4,28 @@
 #
 # This is the default system configuration for ctxmtg. Values here
 # are the lowest priority -- they are overridden by:
-#   1. User config file (~/.ctxmtg/config.yaml)
+#   1. User config file (<runtime_root>/config.yaml)
 #   2. Environment variables (CTXMTG_* prefix)
 #
-# To customize, copy this file to ~/.ctxmtg/config.yaml and edit.
-# See configs/example.yaml for documentation of all options.
+# Runtime data root resolution (see src/ctxmtg/paths.py):
+#   1. CTXMTG_DATA_ROOT environment variable (if set), or
+#   2. <project_root>/.runtime/  (default)
+#
+# To customize, copy this file to <runtime_root>/config.yaml and
+# edit. See configs/example.yaml for documentation of all options.
 # ---------------------------------------------------------------
 
 # ---------------------------------------------------------------
 # Storage: where the knowledge database and vectors are stored.
-# Paths are expanded (~ becomes the user's home directory).
+# Leaving these blank uses the runtime data root defaults from
+# src/ctxmtg/paths.py:
+#   db_path     = <runtime_root>/knowledge.db
+#   vector_path = <runtime_root>/vectors
+# Set explicit paths only if you want to override the defaults.
 # ---------------------------------------------------------------
 storage:
-  # SQLite database for structured data (entities, facts, metadata)
-  db_path: "~/.ctxmtg/knowledge.db"
-  # LanceDB directory for embedding vectors (semantic search)
-  vector_path: "~/.ctxmtg/vectors"
+  db_path: ""
+  vector_path: ""
 
 # ---------------------------------------------------------------
 # Extraction: NER and fact extraction settings.
@@ -84,10 +90,10 @@ profile:
 hive:
   # Mode: "local" (second SQLite file) or "remote" (HTTP, Phase 4)
   mode: "local"
-  # Path to the hive SQLite database (local mode only)
-  local_db_path: "~/.ctxmtg/hive.db"
-  # Path to the hive vector store (local mode only)
-  local_vector_path: "~/.ctxmtg/hive_vectors"
+  # Hive paths default to <runtime_root>/hive.db and
+  # <runtime_root>/hive_vectors -- set only to override.
+  local_db_path: ""
+  local_vector_path: ""
   # Minutes between automatic sync cycles
   sync_interval_minutes: 30
   # Include raw interaction content in sync payload

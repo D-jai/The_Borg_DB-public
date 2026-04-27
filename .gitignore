@@ -4,3 +4,8 @@ __pycache__/
 dist/
 build/
 .env
+
+# Runtime data root (project-local databases, vectors, inbox/outbox,
+# auth files, evaluations). Override location with CTXMTG_DATA_ROOT.
+.runtime/
+.venv/

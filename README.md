@@ -11,6 +11,11 @@ at a local model server, a hosted API, or both.
 
 ## Quick Start
 
+> **Where data lives:** all runtime artifacts (databases, vectors,
+> inbox, outbox, auth files, evaluations) live under
+> `<project_root>/.runtime/`. Override with `CTXMTG_DATA_ROOT=...`
+> if you want them elsewhere. See `src/ctxmtg/paths.py`.
+
 ```bash
 # Clone and install
 git clone https://github.com/D-jai/The_Borg_DB.git
@@ -45,7 +50,7 @@ ctxmtg serve
 | **Thinking-token stripping** | `<think>` / `<thinking>` blocks stripped from all LLM responses before storage |
 | **Web dashboard** | Record counts, farming controls, entity resolution, LLM usage stats |
 | **Per-role LLM config** | Configure API key + base URL + model per pipeline stage (6 roles) |
-| **Inbox watcher** | Drop files into `~/.ctxmtg/inbox/` for auto-ingestion |
+| **Inbox watcher** | Drop files into `<project>/.runtime/inbox/` for auto-ingestion |
 | **HTTP ingest API** | `POST /api/ingest` for programmatic feeding |
 | **LLM proxy** | Transparent proxy that captures LLM conversations as knowledge |
 | **Hive outbox/inbox sync** | Multi-device knowledge aggregation via file-based manifests |

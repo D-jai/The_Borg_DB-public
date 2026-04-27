@@ -109,16 +109,16 @@ def create_default_stages(llm: LLMProvider | None = None) -> list[FarmingStage]:
     Returns:
         Ordered list of FarmingStage instances with default config.
     """
-    # Derive archive.db path from CTXMTG_HOME (same folder as knowledge.db)
-    ctxmtg_home = os.environ.get(
-        "CTXMTG_HOME", os.path.expanduser("~/.ctxmtg"),
-    )
-    # Also check CTXMTG_DB_PATH for multi-instance setups (e.g. Local_Emails)
+    # Derive archive.db path from the runtime data root (see
+    # ctxmtg.paths). For multi-instance setups (e.g. Local_Emails)
+    # CTXMTG_DB_PATH still wins so the archive lives next to the
+    # knowledge.db on a custom path.
     db_path = os.environ.get("CTXMTG_DB_PATH", "")
     if db_path:
         archive_path = os.path.join(os.path.dirname(db_path), "archive.db")
     else:
-        archive_path = os.path.join(ctxmtg_home, "archive.db")
+        from ctxmtg import paths as _paths
+        archive_path = str(_paths.get_archive_db_path())
 
     return [
         # Intelligence stages (1-7): discover new patterns
