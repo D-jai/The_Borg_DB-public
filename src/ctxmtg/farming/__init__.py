@@ -9,7 +9,7 @@ mining accumulated knowledge data to discover higher-order patterns,
 trends, and insights that weren't explicitly stated in any single
 interaction.
 
-The farming pipeline runs in 17 stages organized into three groups:
+The farming pipeline runs in 18 stages organized into three groups:
 
 Intelligence stages (7 stages -- discover new patterns):
     1. Entity analytics: frequency analysis, co-occurrence matrices
@@ -23,16 +23,17 @@ Intelligence stages (7 stages -- discover new patterns):
 Self-learning (1 stage):
     8.  Feedback loop: mines query_quality_log for gap signals
 
-Maintenance stages (9 stages -- keep the knowledge store healthy):
-    9.  Consolidator: merges duplicate / near-duplicate insights
-    10. Pruner: expires stale insights that are no longer relevant
-    11. Completionist: fills gaps in entity profiles and fact coverage
-    12. Linker: cross-references entities across different interactions
-    13. Verifier: validates insight consistency and confidence scores
-    14. Calibrator: adjusts pipeline weights from query-quality feedback
-    15. Distiller: condenses entities into compact summaries with scores
-    16. Archivist: moves old low-value data to cold storage
-    17. Defragmenter: compacts and re-indexes storage for performance
+Maintenance stages (10 stages -- keep the knowledge store healthy):
+    9.  Rationalizer: marks garbage entity names (confidence -> 0.1)
+    10. Consolidator: merges duplicate / near-duplicate insights
+    11. Pruner: expires stale insights that are no longer relevant
+    12. Completionist: fills gaps in entity profiles and fact coverage
+    13. Linker: cross-references entities across different interactions
+    14. Verifier: validates insight consistency and confidence scores
+    15. Calibrator: adjusts pipeline weights from query-quality feedback
+    16. Distiller: condenses entities into compact summaries with scores
+    17. Archivist: moves old low-value data to cold storage
+    18. Defragmenter: compacts and re-indexes storage for performance
 
 Farming runs during idle periods (when the user isn't actively
 querying) and feeds its results back into the query system to
@@ -40,7 +41,7 @@ improve future answer quality. See research/round-1/05-meta-
 intelligence-farming.md for the complete design.
 
 Submodules:
-    - pipeline.py          : 16-stage farming pipeline orchestrator
+    - pipeline.py          : 18-stage farming pipeline orchestrator
     - entity_analytics.py  : Stage 1: frequency, co-occurrence
     - trend_detection.py   : Stage 2: temporal trends
     - clustering.py        : Stage 3: K-Means / HDBSCAN
@@ -49,15 +50,17 @@ Submodules:
     - insight_generator.py : Stage 6: meta-insight storage
     - causal_miner.py      : Stage 7: causal relationship discovery
     - feedback_loop.py     : Stage 8: self-learning from query quality signals
-    - consolidator.py      : Stage 9: duplicate insight merging
-    - pruner.py            : Stage 10: stale insight expiration
-    - completionist.py     : Stage 11: entity/fact gap filling
-    - linker.py            : Stage 12: cross-interaction entity linking
-    - verifier.py          : Stage 13: insight consistency validation
-    - calibrator.py        : Stage 14: feedback-driven weight tuning
-    - distiller.py         : Stage 15: entity summarisation + relevance scoring
-    - archivist.py         : Stage 16: cold storage archival
-    - defragmenter.py      : Stage 17: storage compaction + re-indexing
+    - rationalizer.py      : Stage 9: garbage entity name detection
+    - consolidator.py      : Stage 10: duplicate insight merging
+    - pruner.py            : Stage 11: stale insight expiration
+    - completionist.py     : Stage 12: entity/fact gap filling
+    - linker.py            : Stage 13: cross-interaction entity linking
+    - verifier.py          : Stage 14: insight consistency validation
+    - calibrator.py        : Stage 15: feedback-driven weight tuning
+    - distiller.py         : Stage 16: entity summarisation + relevance scoring
+    - archivist.py         : Stage 17: cold storage archival
+    - defragmenter.py      : Stage 18: storage compaction + re-indexing
+    - progress.py          : Per-stage progressive scan offset tracking
     - checkpoint.py        : Checkpoint persistence for stage progress
     - scheduler.py         : Idle-time scheduling
 """
@@ -95,9 +98,9 @@ if TYPE_CHECKING:
 
 def create_default_stages(llm: LLMProvider | None = None) -> list[FarmingStage]:
     """
-    Build the default ordered list of all 17 farming stages.
+    Build the default ordered list of all 18 farming stages.
 
-    Order: intelligence (7) -> self-learning (1) -> maintenance (9).
+    Order: intelligence (7) -> self-learning (1) -> maintenance (10).
     Defragmenter runs last because it compacts storage after all
     other stages have finished writing.
 

@@ -84,8 +84,8 @@ The_Borg_DB uses LLMs via OpenAI-compatible endpoints for 6 pipeline roles:
 | **Fusion** | Reranks fused results by semantic relevance |
 
 Configure them through the web UI at **Local Instance > LLM Roles**, or by
-writing to `~/.ctxmtg/.env` directly. See [.env.example](.env.example) for the
-full variable layout.
+writing to `<project_root>/.runtime/.env` directly. See [.env.example](.env.example)
+for the full variable layout.
 
 ```bash
 export CTXMTG_LLM__EXTRACTION__API_KEY="your-key"
@@ -119,6 +119,99 @@ rule-based extraction, SQL-only queries, and mathematical result fusion.
 - **[User Guide](docs/user-guide.md)** — Full installation, configuration, and usage guide
 - **[Error Codes](docs/error_codes_guidance.md)** — Structured error code reference
 - **[Whitepaper](docs/whitepaper.md)** — Architecture and design rationale
+- **[Runtime relocation (v0.7.1)](runtimechange.md)** — Why runtime data moved to `<project>/.runtime/`
+- **[Autonomous farming design](autonomous_farming.md)** — Working design notes for the 18-stage pipeline
+- **[Audit findings (v0.7.1)](audit_findings_v0.7.1.md)** — Keying / LLM wiring / merge-route audit
+
+## For LLMs and AI Agents
+
+> If you are an AI coding assistant being pointed at this repository to
+> work on a task, read this section first. It tells you what to load,
+> what to skip, and how the project's invariants are organised.
+
+### Load these on first contact
+
+1. **`README.md`** (this file) -- shape of the system + commands.
+2. **`src/ctxmtg/paths.py`** -- 14 helpers, one resolver. Every
+   runtime-path question has its answer here.
+3. **`src/ctxmtg/farming/__init__.py`** -- the 18-stage roster
+   and `create_default_stages()` ordering.
+4. **`autonomous_farming.md`** -- the working design doc.
+5. **`audit_findings_v0.7.1.md`** -- the live list of known
+   issues. Every "why isn't this fixed?" question has its answer
+   here, including which items are deliberate non-goals.
+6. **`CHANGELOG.md`** -- what shipped when. The most recent
+   section is always the source of truth for current shape.
+
+### Do not pre-read these (load only on demand)
+
+- `docs/whitepaper.md` -- architectural narrative; large; loads
+  context budget without changing how you'd write code.
+- `src/ctxmtg/web/templates/` -- Jinja2 templates for the web UI;
+  load only if you're working on the dashboard.
+- `tests/` directory -- does not exist in the public release.
+  Don't go looking; do not create new tests speculatively
+  unless asked.
+- `configs/default.yaml` -- mostly defaults that the resolver
+  already handles. Only load if a config-shape question comes up.
+
+### Project invariants (do not break)
+
+- **Runtime data root** = `<project_root>/.runtime/` unless
+  `CTXMTG_DATA_ROOT` is set. The resolver in `paths.py` is the
+  only place that decides this. Do not introduce a second
+  decision point. Do not add new path constants in
+  `constants.py`; route through `paths.py`.
+- **Per-interaction entity ids** are deliberate. Same logical
+  entity in two interactions has two ids. The merge UI is a
+  name rename, not an id merge. If you find yourself wanting
+  to "fix" this by introducing a `canonical_entity_id` field,
+  read `audit_findings_v0.7.1.md` Section 1 first; the
+  cross-interaction join question is real but the fix is
+  name-keying the two id-keyed stages, not changing the id
+  model.
+- **`self._llm` is intentionally pre-wired** in 16 of 18 farming
+  stages even though none of them call `.generate()` today.
+  Adding LLM logic to one stage is a one-method change. Don't
+  remove the parameter "to clean up unused state".
+- **Schema migrations are unidirectional**. If you add a DDL
+  constant, append to `ALL_DDL` and bump `SCHEMA_VERSION`.
+  Don't reorder or delete existing constants.
+- **The CLI is the contract**. CLI flags and subcommand names
+  do not change without a CHANGELOG entry. Adding new commands
+  is fine; renaming or removing requires version coordination.
+
+### Common task shapes and how to start them
+
+- **"Add LLM logic to a farming stage"** -- start at the stage
+  file, find `self._llm`, add the call site near where the
+  stage's deterministic logic produces its summary string.
+  Pattern: `if self._llm: <call>` so the stage still runs
+  without a configured LLM. See `query/synthesizer.py` for
+  reference.
+- **"Add a new farming stage"** -- conform to `interfaces/farming.py`,
+  register in `farming/__init__.create_default_stages()`,
+  decide whether you need a checkpoint row and a progress
+  offset row, write a stage docstring that names the stage's
+  unit of work and its keying choice (id vs name).
+- **"Fix a runtime-path bug"** -- start in `paths.py`, then
+  grep for the helper to find the wiring site. Don't add a new
+  constant; reuse or extend a helper.
+- **"Add an entity-resolution feature"** -- start in
+  `web/routes/entities.py` and read the audit's Section 3
+  before touching the code; many "obvious bugs" are reframed
+  by the rename-not-merge model.
+
+### Things you should ASK about, not assume
+
+- Whether to add tests when the public release ships none.
+- Whether a behavioural change (e.g. CausalMiner / Consolidator
+  name keying) should land alone or batched with a smoke-test
+  suite.
+- Whether to migrate `~/.ctxmtg/` data automatically (the
+  decision is currently "no" -- see runtimechange.md).
+- Whether to add CSRF / rate-limit / request-validation to the
+  web routes (currently softened by localhost-only deployment).
 
 ## License
 

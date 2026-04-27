@@ -7,9 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.1] — 2026-04-27
 
-Project-local runtime layout and a fresh-install schema bug fix. Both
-changes are surface-only: existing installations continue to work without
-data migration.
+Project-local runtime layout, a fresh-install schema bug fix, and the
+post-release Phase C documentation deep-dive. The runtime / schema
+changes are surface-only: existing installations continue to work
+without data migration. The Phase C deliverables are pure documentation
+plus a docstring fix in `farming/__init__.py`.
+
+### Documentation
+
+- **`audit_findings_v0.7.1.md`** — consolidated Phase C audit covering
+  the 18-stage farming pipeline (keying analysis), LLM wiring across
+  the codebase, and the `/entities/merge` defect catalog re-walk.
+- **`runtimechange.md`** — canonical record of the runtime relocation:
+  why, the resolver design, the three wiring patterns used, the
+  configuration changes, the migration paths, and the deliberate
+  non-goals.
+- **`autonomous_farming.md`** — working design doc for the farming
+  subsystem: what each stage does, why some take an `llm` and don't
+  call it, the keying question, the merge-as-rename model, the
+  proposed Phase 4.0 quick-win batch, and three open design questions.
+- **`README.md`** — adds a "For LLMs and AI Agents" section that
+  tells AI coding assistants what to load on first contact, what to
+  skip, the project's hard invariants, and common task shapes.
 
 ### Added
 
