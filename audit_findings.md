@@ -1,7 +1,8 @@
-# Audit findings -- v0.7.1
+# Audit findings
 
-> Living audit of the public release as of commit `e460c74`
-> (2026-04-27).  Three audits in scope:
+> Living audit of the codebase.  Originally consolidated at commit
+> `e460c74` (2026-04-27, v0.7.1) and updated as items land.  Three
+> audits in scope:
 >
 >   1. The 18-stage farming pipeline -- name-keyed vs id-keyed
 >   2. LLM wiring across the codebase

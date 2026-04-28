@@ -107,7 +107,7 @@ and verifications get richer.
 |---------|----------------------------------------|
 | `ctxmtg ingest …` | Extraction role runs after NER to verify candidates and add domain-specific entities the rule-based extractor missed. |
 | `ctxmtg query …` | Query Planning interprets the question, Retrieval formulates V2S/S2V bridges, Fusion re-ranks, Synthesis writes a cited answer. |
-| `ctxmtg farm run` | Currently deterministic. Future releases will wire LLMs into Distiller, Causal Mining, and Insight Generation — see `llm_design.md` for the staged plan. |
+| `ctxmtg farm run` | LLM-narrated for the Distiller stage when a `farming`-role provider is configured (Phase 4.1); other 15 stages still deterministic. See `DESIGN.md` Part II for the staged plan. |
 | `ctxmtg evaluate …` | LLM-as-judge scores answer quality against gold expectations. |
 
 You can mix-and-match per role. A common setup is a small local model
@@ -129,7 +129,7 @@ without code changes:
 
 Each layer is independently versionable. To experiment with a variant
 prompt for a role, drop a new file at `prompts/stages/<role>/vX.Y.Z.txt`
-— no code change needed. See [llm_design.md](llm_design.md) for the
+— no code change needed. See [DESIGN.md](DESIGN.md) Part II for the
 prompt-experimentation methodology and the planned eval harness.
 
 ## CLI Commands
@@ -155,10 +155,9 @@ prompt-experimentation methodology and the planned eval harness.
 - **[User Guide](docs/user-guide.md)** — Full installation, configuration, and usage guide
 - **[Error Codes](docs/error_codes_guidance.md)** — Structured error code reference
 - **[Whitepaper](docs/whitepaper.md)** — Architecture and design rationale
-- **[Runtime relocation (v0.7.1)](runtimechange.md)** — Why runtime data moved to `<project>/.runtime/`
-- **[Autonomous farming design](autonomous_farming.md)** — Working design notes for the 18-stage pipeline
-- **[Audit findings (v0.7.1)](audit_findings_v0.7.1.md)** — Keying / LLM wiring / merge-route audit
-- **[LLM design spec](llm_design.md)** — All 9 LLM call sites, per-role prompt variants, eval harness sketch, autonomy roadmap. **Section 10 is the recommended next-step sequence.**
+- **[Design spec](DESIGN.md)** — Working design doc in two parts: Part I covers the 18-stage farming pipeline, Part II covers the LLM strategy (every call site, prompt variants, eval harness, autonomy roadmap). Section II.10 is the recommended next-step sequence.
+- **[Audit findings](audit_findings.md)** — Living keying / LLM wiring / merge-route audit. Source of truth for "why isn't X fixed?"
+- **[CHANGELOG](CHANGELOG.md)** — Release history. The most recent section is the source of truth for what's actually live.
 
 ## For LLMs and AI Agents
 
@@ -173,17 +172,17 @@ prompt-experimentation methodology and the planned eval harness.
    runtime-path question has its answer here.
 3. **`src/ctxmtg/farming/__init__.py`** -- the 18-stage roster
    and `create_default_stages()` ordering.
-4. **`autonomous_farming.md`** -- the working design doc.
-5. **`audit_findings_v0.7.1.md`** -- the live list of known
-   issues. Every "why isn't this fixed?" question has its answer
-   here, including which items are deliberate non-goals.
-6. **`llm_design.md`** -- the LLM strategy working spec. Read
-   Section 10 ("Recommended sequence") for the long-term plan.
-   **Phase 4.1 has shipped** (`DistillerStage` LLM wiring); the
-   `[Unreleased]` CHANGELOG section is the source of truth for
-   what is live today.
-7. **`CHANGELOG.md`** -- what shipped when. The most recent
+4. **`DESIGN.md`** -- the consolidated working design spec in
+   two parts. Part I is the farming subsystem; Part II is the
+   LLM strategy. The status board at the top tells you what
+   has shipped vs what is pending. Read Section II.10
+   ("Recommended sequence") for the long-term plan.
+5. **`audit_findings.md`** -- the living audit. Every
+   "why isn't this fixed?" question has its answer here,
+   including which items are deliberate non-goals.
+6. **`CHANGELOG.md`** -- what shipped when. The most recent
    section is always the source of truth for current shape.
+   `[Unreleased]` lists everything live since the last tag.
 
 ### Do not pre-read these (load only on demand)
 
@@ -208,7 +207,7 @@ prompt-experimentation methodology and the planned eval harness.
   entity in two interactions has two ids. The merge UI is a
   name rename, not an id merge. If you find yourself wanting
   to "fix" this by introducing a `canonical_entity_id` field,
-  read `audit_findings_v0.7.1.md` Section 1 first; the
+  read `audit_findings.md` Section 1 first; the
   cross-interaction join question is real but the fix is
   name-keying the two id-keyed stages, not changing the id
   model.
@@ -288,7 +287,9 @@ prompt-experimentation methodology and the planned eval harness.
   name keying) should land alone or batched with a smoke-test
   suite.
 - Whether to migrate `~/.ctxmtg/` data automatically (the
-  decision is currently "no" -- see runtimechange.md).
+  decision is currently "no" -- the v0.7.1 CHANGELOG entry
+  records the rationale; `paths.py` is the source of truth
+  for the resolver).
 - Whether to add CSRF / rate-limit / request-validation to the
   web routes (currently softened by localhost-only deployment).
 

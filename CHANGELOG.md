@@ -20,9 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   provider, so behaviour with `llm=None` is byte-for-byte unchanged.
   System and user prompts live as module-level constants
   (`DISTILLER_SYSTEM_PROMPT`, `DISTILLER_USER_PROMPT_TEMPLATE`); see
-  `llm_design.md` Section 6.2.1 for the design rationale and Section
-  10 for the larger sequence. First of the 16 dead farming hooks to
-  go live.
+  `DESIGN.md` Section II.6.2.1 for the design rationale and Section
+  II.10 for the larger sequence. First of the 16 dead farming hooks
+  to go live.
 - **Ingest LLM parity for HTTP API** (`src/ctxmtg/web/routes/ingest.py`).
   `POST /api/ingest` now wires the `extraction`-role LLM verifier
   and abstractive summariser the same way `ctxmtg ingest` does, so
@@ -63,6 +63,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   hallucination guardrails live in the prompts; HTTP ingest must
   stay in lockstep with CLI ingest. Added two new "common task
   shapes" entries pointing at the Phase-4.1-style wiring patterns.
+- **Working specs consolidated.** `autonomous_farming.md` and
+  `llm_design.md` merged into a single two-part `DESIGN.md`
+  (Part I: farming, Part II: LLM strategy). Status board at the
+  top tells agents what has shipped vs what is pending.
+  `audit_findings_v0.7.1.md` renamed to `audit_findings.md` to
+  signal it's a living document, not a release artifact.
+  Two stale files removed: `runtimechange.md` (historical record
+  of the v0.7.1 runtime relocation -- the `paths.py` resolver
+  docstring is now the source of truth, and the v0.7.1 CHANGELOG
+  entry below preserves the rationale) and `baseline_smoke_test.md`
+  (one-shot first-run snapshot from 2026-04-27, now in git
+  history). README's Documentation list and "For LLMs" load list
+  updated. Source files (`farming/distiller.py` docstring) updated
+  to point at the new locations. No information lost.
 
 ## [0.7.1] — 2026-04-27
 
