@@ -96,6 +96,42 @@ export CTXMTG_LLM__EXTRACTION__MODEL="your-model-id"
 All features work without an LLM — the system degrades gracefully to
 rule-based extraction, SQL-only queries, and mathematical result fusion.
 
+### Using the LLM features
+
+Once a role is configured, its LLM is used automatically by the matching
+pipeline path. No flags, no special commands. The same CLI you ran
+without an LLM keeps working; the difference is that answers, insights,
+and verifications get richer.
+
+| Command | What changes when LLMs are configured |
+|---------|----------------------------------------|
+| `ctxmtg ingest …` | Extraction role runs after NER to verify candidates and add domain-specific entities the rule-based extractor missed. |
+| `ctxmtg query …` | Query Planning interprets the question, Retrieval formulates V2S/S2V bridges, Fusion re-ranks, Synthesis writes a cited answer. |
+| `ctxmtg farm run` | Currently deterministic. Future releases will wire LLMs into Distiller, Causal Mining, and Insight Generation — see `llm_design.md` for the staged plan. |
+| `ctxmtg evaluate …` | LLM-as-judge scores answer quality against gold expectations. |
+
+You can mix-and-match per role. A common setup is a small local model
+(e.g. an 8B-class model on a localhost endpoint) for Extraction and
+Farming, and a larger hosted model for Synthesis. Each role has its
+own `BASE_URL` / `MODEL` / `API_KEY` in `.env`.
+
+### How prompts work
+
+The system uses a **4-layer prompt assembler** so prompts can be tuned
+without code changes:
+
+1. **Base** (`prompts/base/v1.0.0.txt`) — shared safety + format rules.
+2. **Stage** (`prompts/stages/<role>/v1.0.0.txt`) — per-role task instructions.
+3. **Domain** — slot-injected from the active `DomainProfile`
+   (entity types, terminology, reasoning patterns).
+4. **User preferences** — per-user customizations (summary length,
+   priority topics, output language).
+
+Each layer is independently versionable. To experiment with a variant
+prompt for a role, drop a new file at `prompts/stages/<role>/vX.Y.Z.txt`
+— no code change needed. See [llm_design.md](llm_design.md) for the
+prompt-experimentation methodology and the planned eval harness.
+
 ## CLI Commands
 
 | Command | Description |
@@ -122,6 +158,7 @@ rule-based extraction, SQL-only queries, and mathematical result fusion.
 - **[Runtime relocation (v0.7.1)](runtimechange.md)** — Why runtime data moved to `<project>/.runtime/`
 - **[Autonomous farming design](autonomous_farming.md)** — Working design notes for the 18-stage pipeline
 - **[Audit findings (v0.7.1)](audit_findings_v0.7.1.md)** — Keying / LLM wiring / merge-route audit
+- **[LLM design spec](llm_design.md)** — All 9 LLM call sites, per-role prompt variants, eval harness sketch, autonomy roadmap. **Section 10 is the recommended next-step sequence.**
 
 ## For LLMs and AI Agents
 
@@ -140,7 +177,11 @@ rule-based extraction, SQL-only queries, and mathematical result fusion.
 5. **`audit_findings_v0.7.1.md`** -- the live list of known
    issues. Every "why isn't this fixed?" question has its answer
    here, including which items are deliberate non-goals.
-6. **`CHANGELOG.md`** -- what shipped when. The most recent
+6. **`llm_design.md`** -- the LLM strategy working spec. Read
+   Section 10 ("Recommended sequence") for the current
+   next-step plan. **Phase 4.1 (Distiller LLM wiring) is the
+   immediate next concrete deliverable.**
+7. **`CHANGELOG.md`** -- what shipped when. The most recent
    section is always the source of truth for current shape.
 
 ### Do not pre-read these (load only on demand)
