@@ -1,6 +1,6 @@
 # The_Borg_DB: A Local-First Multi-Agent Knowledge Intelligence System
 
-**White Paper v1.1**
+**White Paper v1.2**
 **Aliud Inquisito Inc.**
 **April 2026**
 
@@ -8,7 +8,7 @@
 
 ## Abstract
 
-This paper presents The_Borg_DB, a local-first knowledge intelligence system that extracts structured knowledge from unstructured text, stores it in a dual SQL + vector architecture, answers hybrid queries through four distinct retrieval modes, and continuously mines accumulated data for higher-order patterns through a 18-stage farming pipeline. Unlike cloud-dependent AI memory systems, The_Borg_DB runs entirely on user-controlled hardware -- from a $200 Raspberry Pi to enterprise servers -- ensuring complete data sovereignty. A cross-device aggregation layer (the hive-collective) enables multi-instance intelligence discovery without transmitting raw data. The system is designed for regulated industries (healthcare, finance, defense, legal) where cloud processing of sensitive data is legally or operationally prohibitive.
+The_Borg_DB is a local-first knowledge system. It extracts structured knowledge from unstructured text, stores it in a paired SQL + vector architecture, answers queries through four retrieval modes, and runs an 18-stage farming pipeline that mines accumulated data for higher-order patterns. The codebase runs on hardware ranging from a Raspberry Pi 4 to a multi-GPU server. All data is stored on the user's device; raw content does not leave the device unless the user configures an LLM API key, in which case only prompts (not stored data) are sent to the chosen provider. A cross-device aggregation layer -- the hive-collective -- transmits distilled summaries between instances over a file-based outbox/inbox protocol; raw content is never transmitted. The system is intended for use in regulated industries (healthcare, finance, defense, legal) where cloud processing of sensitive data is restricted.
 
 ---
 
@@ -28,48 +28,42 @@ This paper presents The_Borg_DB, a local-first knowledge intelligence system tha
 12. [Domain Profiles and Vertical Adaptability](#12-domain-profiles-and-vertical-adaptability)
 13. [Competitive Analysis](#13-competitive-analysis)
 14. [Market Opportunity](#14-market-opportunity)
-15. [Conclusion](#15-conclusion)
+15. [Summary](#15-summary)
 
 ---
 
 ## 1. Introduction
 
-The explosion of AI-powered knowledge management tools has created a paradox for the industries that would benefit most from them. Healthcare organizations cannot send patient records to cloud LLMs without violating HIPAA. Financial institutions cannot process trade rationale through multi-tenant GPU infrastructure without SOX compliance exposure. Defense agencies cannot process classified intelligence through commercial APIs at all.
+Several regulated industries cannot use cloud-hosted LLM tools for content that falls under HIPAA, SOX, ITAR, FERPA, or classified-information handling. These regimes restrict transmission of regulated content to multi-tenant infrastructure or to commercial APIs.
 
-These are not edge cases. Healthcare ($4.5 trillion), financial services ($2.1 trillion), and defense represent the largest addressable markets for AI knowledge systems -- and they are systematically locked out of every major cloud-based solution.
+The_Borg_DB targets this constraint by running the model where the data lives. Extraction, storage, query, and farming all execute on user-controlled hardware. When LLM features are enabled, prompts are sent to the user-configured endpoint (which may itself be a local LLM); stored content is not.
 
-The_Borg_DB resolves this by inverting the architecture. Instead of sending data to the model, the model runs where the data lives: on the user's own hardware. The result is a complete knowledge intelligence system that extracts structured facts, answers hybrid queries, and continuously discovers patterns -- all without a single byte of user data having to leave the device (local llm required).
-
-This paper describes the technical architecture, the intelligence pipeline, the cross-device aggregation model, and the market positioning of The_Borg_DB.
+This paper describes the system architecture, the extraction and query pipelines, the 18-stage farming pipeline, the cross-device aggregation model (the hive-collective), and the LLM integration strategy.
 
 ---
 
 ## 2. Problem Statement
 
-### 2.1 The Limitations of Current AI Memory Systems
+### 2.1 Limitations of Existing AI Memory Systems
 
-We evaluated eight leading AI memory systems: Many share a common paradigm: they capture interactions, extract memories using large language models, store them in vector databases, and retrieve them via semantic search.
+A survey of eight current AI memory systems identifies a common pattern: capture interactions, extract memories using an LLM, store them in a vector database, retrieve via semantic search. Three properties of this pattern are relevant here:
 
-This paradigm has three fundamental limitations:
+**Single-store retrieval.** Vector databases support semantic similarity but not aggregations or filtered counts. "How many meetings discussed OAuth2 in March?" requires a `COUNT` with a `WHERE` filter on a date column -- a SQL operation, not a vector operation.
 
-**Single-store retrieval.** Vector databases excel at semantic similarity but cannot answer precise factual queries. "How many meetings discussed OAuth2 in March?" requires a `COUNT` with a `WHERE` clause on a date column and a subject filter -- a trivial SQL query but impossible in a pure vector store.
+**Retrieval-only.** These systems return what was stored. They do not run subsequent analyses (entity co-occurrence, temporal trends, causal relationships, gap detection) over accumulated data.
 
-**No meta-intelligence.** Existing systems are retrieval engines. They recall what was explicitly stated. They do not analyze accumulated data to discover entity co-occurrence patterns, temporal trends, causal relationships, or knowledge gaps. They do not improve without user action.
+**Cloud dependency.** Most systems in the survey require cloud infrastructure or external LLM API calls for core operations, which is incompatible with the regulatory regimes named in Section 1.
 
-**Cloud dependency.** Every major system except Nemp (a simple JSON key-value store) requires cloud infrastructure or external LLM API calls for core operations. This creates a hard barrier for regulated industries.
+### 2.2 Structured vs. Chunk-Based Storage
 
-### 2.2 The Structured Knowledge Gap
+The single-store systems above store text as chunks plus embeddings. A statement such as "Alice proposed migrating to OAuth2 by March 15" is stored as a ~256-character chunk and a 384-dimensional vector.
 
-The deeper problem is architectural. Current systems store knowledge as unstructured text chunks and find them by vector similarity. When a meeting transcript states "Alice proposed migrating to OAuth2 by March 15", they store a 256-character chunk and embed it as a 384-dimensional vector.
-
-The_Borg_DB does something fundamentally different. It extracts:
+The_Borg_DB additionally extracts subject-predicate-object triples:
 
 - `Alice Chen → proposed → OAuth2 Migration` (confidence: 0.95)
 - `OAuth2 Migration → deadline_is → March 15` (confidence: 0.99)
 
-These are structured knowledge atoms -- subject-predicate-object triples stored in a relational database with confidence scores, timestamps, and provenance tracking. They are precise, queryable, and unfalsifiable. When the deadline changes, the old fact is superseded and the new one recorded. The history is preserved.
-
-This is the difference between a search engine and a knowledge system.
+Each triple is stored in the relational schema with a confidence score, a timestamp, a provenance tag, and a supersession pointer. When a fact is updated, the prior version is marked superseded rather than overwritten; the history is queryable.
 
 ---
 
@@ -81,7 +75,7 @@ The_Borg_DB is built as a three-component edge architecture:
 
 1. **Ingestion Worker** -- Processes incoming text through NER, fact extraction, embedding, and storage. Spawns on demand and exits after processing to release memory.
 2. **Query Server** -- Persistent, latency-sensitive server handling user queries through intent classification, dual-store retrieval, result fusion, and optional LLM synthesis.
-3. **Background Scheduler** -- Runs during idle time. Executes the 18-stage farming pipeline, hive-collective synchronization, and self-learning maintenance.
+3. **Background Scheduler** -- Runs during idle time. Executes the 18-stage farming pipeline, hive-collective outbox writes, and self-learning maintenance.
 
 ```
                       ┌──────────────────┐
@@ -154,9 +148,9 @@ This metadata is critical for downstream quality. The farming pipeline's mainten
 
 The ingestion pipeline accepts 10 file formats natively: `.txt`, `.md`, `.csv`, `.html`, `.docx`, `.pdf`, `.json`, `.eml`, `.ics`, `.vcf`. Each format has a dedicated loader that normalizes content for the extraction pipeline. Additional feeding paths include:
 
-- **Inbox watcher** -- File system polling (`~/.The_Borg_DB/inbox/`)
-- **HTTP ingest API** -- `POST /api/ingest` for programmatic feeding
-- **LLM proxy** -- Transparent proxy that captures LLM conversations as knowledge
+- **Inbox watcher** -- File system polling of `<runtime>/inbox/` (default `~/.ctxmtg/inbox/`)
+- **HTTP ingest API** -- `POST /api/ingest`. Uses the same extraction pipeline as the CLI, including the LLM verifier and the abstractive summary step when an extraction-role provider is configured.
+- **LLM proxy** -- Transparent OpenAI-compatible proxy that captures forwarded conversations as knowledge.
 
 ---
 
@@ -164,9 +158,7 @@ The ingestion pipeline accepts 10 file formats natively: `.txt`, `.md`, `.csv`, 
 
 ### 5.1 Why Two Stores
 
-The fundamental insight behind The_Borg_DB's architecture is that knowledge has two dimensions: **structure** and **meaning**. Structured facts ("Alice leads OAuth2") are best stored and queried in a relational database. Semantic meaning ("discussions about authentication modernization") is best captured by vector embeddings.
-
-No single storage technology handles both well. SQL databases cannot perform similarity search. Vector databases cannot execute `WHERE` clauses with `GROUP BY` aggregations. The_Borg_DB uses both, linked by deterministic UUIDv5 identifiers:
+Two query categories matter here: structured queries over facts ("entities of type PERSON who lead any OAuth2-tagged project") and similarity queries over text ("interactions about authentication modernization"). SQL handles the first; vector indexes handle the second. SQLite cannot do approximate nearest-neighbor search; LanceDB cannot do `WHERE ... GROUP BY` aggregations. The_Borg_DB runs both stores and links them by deterministic UUIDv5 identifiers:
 
 | Store | Technology | What it holds | Query strength |
 |-------|-----------|--------------|----------------|
@@ -237,14 +229,11 @@ where `k` is a constant (default 60) and the sum is over all lists in which the 
 
 When an LLM is configured, the fused result set is passed to a synthesis agent that generates a natural-language answer with citations. Each claim in the answer references its source: `[SQL:n]` for structured facts, `[VEC:n]` for semantic matches. Contradictions between sources are flagged explicitly.
 
-### 6.4 Empirical Validation
+### 6.4 Mode Selection
 
-In a controlled experiment using 40 real interactions from a 3-month engineering team dataset, V2S and S2V retrieved complementary information for the same query ("Why was the deployment deadline extended?"):
+The four modes are not interchangeable. V2S and S2V emphasize different result classes: V2S surfaces structured facts that match a semantically similar context (precise dates, severity ordering, named decisions), while S2V starts from a structured briefing and pulls in semantic context that fills gaps (causal factors, sentiment, narrative). Deep mode runs both and merges the result streams before synthesis. Mode selection is exposed at the CLI (`--mode`) and at the web UI; default is `parallel`.
 
-- **V2S** found three deadline changes with precise dates and structured severity ordering.
-- **S2V** found two deadline changes but explained the causal factors: security vulnerability findings and team capacity constraints.
-
-Neither path is wrong. They surface different facets of the answer. A synthesizer given both result streams produces a richer response than either path alone.
+Benchmark numbers from a 101-interaction engineering dataset are reproduced in the user guide (§7.2): parallel returns ~25 results in ~1.3s without synthesis; v2s returns ~50 results in ~22s with synthesis; s2v ~31 in ~23s; deep ~50-56 in ~60s.
 
 ---
 
@@ -252,9 +241,7 @@ Neither path is wrong. They surface different facets of the answer. A synthesize
 
 ### 7.1 What Farming Is
 
-Farming is a 18-stage background pipeline that mines accumulated knowledge for higher-order patterns. It runs during device idle time and transforms raw interactions into structured intelligence that no single query could discover.
-
-The key insight: **the system improves without user action.** Day 1, you have raw interactions. Day 30, the farming pipeline has extracted causal patterns, identified entity clusters, flagged knowledge gaps, and produced distilled summaries that accelerate every future query.
+Farming is an 18-stage background pipeline. It runs by user invocation (`ctxmtg farm run`) or on a systemd timer. Its inputs are the entities, facts, and interactions already in the SQL store; its outputs are rows in the `meta_insights` and `distiller_summaries` tables, plus maintenance actions logged in the `maintenance_*` tables. The pipeline is split into three groups: intelligence stages (1-7), a self-learning stage (8), and maintenance stages (9-18).
 
 ### 7.2 Intelligence Stages (1-7)
 
@@ -268,7 +255,7 @@ The key insight: **the system improves without user action.** Day 1, you have ra
 | **Insight Generation** | Cross-cycle delta comparison | New patterns since the last farming run |
 | **Causal Mining** | Time-lagged predicate analysis | Temporal cause-effect relationships |
 
-Causal mining is particularly significant. By analyzing predicates that consistently co-occur with a time lag (e.g., "budget concern raised" followed by "deadline extended" within 14 days for the same entity, 71% of the time), the system discovers causal signals embedded in ordinary meeting data.
+Causal mining (stage 7) operates on real (non-farming-generated) facts. It scans for predicate pairs that recur with a consistent temporal lag for the same entity (illustrative pattern: "budget concern raised" followed by "deadline extended" within 14 days for the same project entity). Output is a `meta_insights` row of type `causal` with the observed pair, lag distribution, and support count. The user is responsible for interpretation; the system does not assert causation, only correlation with lag.
 
 ### 7.3 Self-Learning Stage (8)
 
@@ -285,7 +272,7 @@ The **Feedback Loop** reads the query quality log -- a record of every query, it
 | **Linker** | Cross-references entities across interactions | Enables cross-document queries |
 | **Verifier** | Checks fact consistency | Surfaces contradictions |
 | **Calibrator** | Adjusts extraction weights from feedback | System improves over time |
-| **Distiller** | Builds compact entity summaries | Powers fast autocomplete |
+| **Distiller** | Builds compact entity summaries (relevance score, top co-entities, top predicates). When a `farming`-role LLM provider is configured, the deterministic summary is rewritten by the LLM as a 1-2 sentence narrative; without an LLM the deterministic summary is used as-is | Powers `ctxmtg suggest` autocomplete and the dashboard's distilled-entities surface |
 | **Archivist** | Moves cold and rationalized data to a separate `archive.db`. Garbage bypass: any entity with `confidence ≤ 0.1` is archived immediately regardless of age | Keeps active database lean and implements the second phase of the garbage lifecycle |
 | **Defragmenter** | Compacts and re-indexes | Maintains query performance |
 
@@ -297,13 +284,11 @@ The farming pipeline is designed for edge deployment. Peak RAM usage is capped a
 
 ---
 
-## 8. Cross-Device, Multiple nodes Intelligence: The hive-collective
+## 8. Cross-Device Intelligence: The hive-collective
 
-### 8.1 The Cross-Device, individual node (instance) Blind Spot
+### 8.1 The Per-Instance Blind Spot
 
-Each device or instance or node runs its own 18-stage farming pipeline on its own data. But individual devices, instances or nodes have blind spots. Your laptop sees Alice and OAuth2. Your meeting room Pi or PC or transcripts node DB, sees Bob and the security audit. Your other instance sees Alice and the budget review. No single device or instance sees the connection between Alice and the security audit through their shared association with OAuth2.  Only when individual node insights are pushed to the 'hive-collective', we get rich intelligence.
-
-The hive-collective resolves this.
+Each instance runs its own 18-stage farming pipeline on its own local data. An instance only knows what it has ingested. If laptop A sees facts about `Alice` and `OAuth2`, meeting-room Pi B sees facts about `Bob` and the security audit, and laptop C sees `Alice` and the budget review, no single instance has the data needed to discover the indirect link `Alice -> security audit` through the shared `OAuth2` entity. The hive-collective aggregates the per-instance distillations and runs cross-stream analyses against the merged view.
 
 ### 8.2 Architecture
 
@@ -337,20 +322,20 @@ The hive-collective never pulls raw data from devices. Devices push distilled pr
 
 ## 9. LLM Integration Strategy
 
-### 9.1 Per-Role API Configuration
+### 9.1 Per-Role Provider Configuration
 
-The_Borg_DB uses Local LLMs for six pipeline roles, each independently configurable:
+LLM use is split across six pipeline roles. Each role is independently configured (provider, base URL, model name, API key). A role is optional -- if it is not configured, the corresponding pipeline stage uses its deterministic fallback.
 
-| Role | Function | Recommended model class |
-|------|----------|------------------------|
-| Extraction | Verify and enrich NER output | 12B+ (GPT-4o-mini, Gemini Flash) |
-| Query Planning | Interpret natural language queries | 12B+ |
-| Retrieval Bridge | Formulate cross-store bridge queries | Mainstream (GPT-4o, Claude) |
-| Synthesis | Generate cited answers | Mainstream (GPT-4o, Claude) |
-| Farming | Generate insight descriptions | 12B+ |
-| Fusion | Rerank results by relevance | 12B+ |
+| Role | Function | Suggested capability |
+|------|----------|---------------------|
+| Extraction | Verify and enrich NER + fact output; rewrite the abstractive summary | Mid-tier (12B local or hosted small) |
+| Query Planning | Classify intent, formulate SQL or vector queries | Mid-tier |
+| Retrieval Bridge | Formulate cross-store bridge queries (V2S / S2V) | Mid-tier |
+| Synthesis | Generate cited answers from fused result sets | Larger general-purpose |
+| Farming | Generate narrative descriptions for insights and distilled summaries | Mid-tier |
+| Fusion | Rerank fused result sets by relevance | Mid-tier |
 
-Each role can use a different provider, model, and API key (if choosen). Configuration is managed through a web UI or environment variables, stored in a local `.env` file.
+Configuration is managed through the web UI or environment variables, stored in a local `.env` file with permission 600 and excluded from version control.
 
 ### 9.2 Usage Tracking
 
@@ -422,15 +407,7 @@ Switching profiles is instantaneous -- a single configuration change. The extrac
 
 ## 13. Competitive Analysis
 
-Left Blank purposely.
-
-### 13.1 Strategic xxxx
-
-1. **Architectural** -- Dual-store + four retrieval modes + farming pipeline is a fundamentally different architecture from single-store RAG. Competitors cannot add this without a complete rewrite.
-
-2. **Regulatory** -- The_Borg_DB is the only system that can operate in HIPAA, SOX, ITAR, and FERPA environments without compliance exceptions. This is not a feature -- it is a market category.
-
-3. **Compounding intelligence** -- The farming pipeline means The_Borg_DB improves overtime. Every day of data accumulation produces richer insights. Other options do not compound.
+Intentionally omitted from this revision.
 
 ---
 
@@ -438,27 +415,31 @@ Left Blank purposely.
 
 ### 14.1 Total Addressable Market
 
-Left Blank purposely.
-
-Combined, these sectors represent over $2 trillion in economic activity with active demand for AI knowledge tools and a prohibitive concern on using cloud-based solutions.
+Intentionally omitted from this revision. Quantified TAM figures will be provided when supporting citations are available.
 
 ### 14.2 Go-to-Market Strategy
 
-**Phase 1: Developer adoption.** Open-source core with proprietary license. Developer community validates architecture, contributes domain profiles, identifies edge cases.
+**Phase 1: Developer adoption.** Open-source core under a Business Source License. Developer community validates the architecture, contributes domain profiles, and identifies edge cases.
 
-**Phase 2: Enterprise pilots.** Compliance-first positioning for healthcare, finance, and defense. SOC 2 and HIPAA compliance documentation. On-premise deployment model.
+**Phase 2: Enterprise pilots.** Compliance-first positioning for healthcare, finance, and defense. Compliance documentation (SOC 2, HIPAA) produced as pilots require. On-premise deployment.
 
-**Phase 3: Platform.** API-first architecture enables third-party integrations. Domain profile marketplace. Managed hive-collective service for multi-site enterprises.
+**Phase 3: Platform.** API surface for third-party integrations. Domain profile marketplace. Managed hive-collective service for multi-site enterprises.
 
 ---
 
-## 15. Conclusion
+## 15. Summary
 
-The_Borg_DB represents a fundamental rethinking of how AI knowledge systems should work. Instead of sending sensitive data to cloud APIs, the model runs where the data lives. Instead of storing knowledge as text chunks, the system extracts structured facts. Instead of offering one retrieval path, it offers four, each optimized for different query types. Instead of waiting for user queries, a 18-stage farming pipeline continuously discovers patterns. Instead of siloing knowledge on individual devices, a privacy-preserving hive-collective aggregates intelligence across instances.
+The_Borg_DB has the following properties:
 
-The result is a system that is simultaneously more private, more precise, more scalable, and more intelligent than any cloud-dependent alternative. It gets smarter every night while the user sleeps. It operates on a $200 Raspberry Pi or a $50,000 server. It adapts to multiple industry verticals with just one configuration change.
+- All data is stored on user-controlled hardware. Raw content is not transmitted unless the user configures an LLM API key, in which case prompts (not stored content) are sent to the chosen endpoint.
+- Knowledge is stored both as subject-predicate-object triples (SQL) and as text embeddings (vector), linked by deterministic UUIDv5 identifiers.
+- Four retrieval modes are exposed: parallel, V2S, S2V, deep. The non-LLM modes are fully functional without any LLM provider configured.
+- An 18-stage farming pipeline runs over accumulated data to produce trends, clusters, topics, causal patterns, and per-entity distilled summaries, and to perform consolidation, pruning, verification, archiving, and defragmentation.
+- A file-based outbox/inbox protocol moves distilled summaries between instances. The hive-collective runs three additional stages over the merged view: cross-stream scoring, latent relationship discovery, and insight correlation.
+- LLM use is split across six independently configured roles. Every LLM-dependent code path has a deterministic fallback.
+- Domain adaptation is by YAML profile; switching profiles does not require code changes.
 
-The knowledge you already have -- in your meetings, emails, documents, and conversations -- is enormously valuable. Most tools let you search it. The_Borg_DB learns from it.
+The system runs on hardware ranging from a Raspberry Pi 4 to a multi-GPU server. The same codebase, same profiles, and same query interface apply across all tiers; backend providers are auto-selected per tier.
 
 ---
 
