@@ -95,7 +95,40 @@ async def http_ingest(req: IngestRequest):
                 from ctxmtg.profile.loader import ProfileLoader
 
                 profile = ProfileLoader.load("general")
-                extraction = BasicExtractionPipeline(profile)
+
+                # Wire the extraction-role LLM verifier and abstractive
+                # summariser if a provider is configured.  Mirrors the
+                # CLI's _init_ingest_worker pattern so HTTP ingest --
+                # used by the proxy, browser extensions, and the inbox
+                # watcher -- gets the same LLM enhancement that the CLI
+                # gets.  All paths fall back gracefully when no LLM is
+                # configured.
+                llm_verifier = None
+                extraction_llm = None
+                try:
+                    from ctxmtg.llm.factory import create_provider
+                    extraction_llm = create_provider("extraction")
+                    if extraction_llm:
+                        from ctxmtg.extraction.llm_verifier import (
+                            LLMExtractionVerifier,
+                        )
+                        from ctxmtg.llm.prompt_assembler import PromptAssembler
+                        assembler = PromptAssembler()
+                        llm_verifier = LLMExtractionVerifier(
+                            llm=extraction_llm,
+                            prompt_assembler=assembler,
+                            profile=profile,
+                        )
+                except Exception as exc:
+                    logger.warning(
+                        "http_ingest_llm_init_failed", error=str(exc)
+                    )
+
+                extraction = BasicExtractionPipeline(
+                    profile,
+                    llm_verifier=llm_verifier,
+                    llm=extraction_llm,
+                )
             except Exception:
                 pass
 

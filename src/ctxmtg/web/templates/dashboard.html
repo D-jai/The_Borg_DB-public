@@ -30,6 +30,33 @@
     {% include "fragments/stats.html" %}
 </div>
 
+{# LLM role status -- one-glance "is the genie wired up?" widget.
+   Configured = API key set, OR endpoint is localhost.  Not a live
+   ping (cost / latency); use Local Instance > LLM Roles to test. #}
+{% if llm_roles %}
+<h2 class="mt-2">LLM Roles</h2>
+<div class="card">
+    <p style="color:var(--muted); margin-bottom: 0.75rem; font-size: 0.9rem;">
+        Configured roles below.  Edit at
+        <a href="/local">Local Instance &gt; LLM Roles</a>.
+    </p>
+    <div class="flex" style="flex-wrap: wrap; gap: 0.5rem;">
+        {% for r in llm_roles %}
+        <div class="card" style="padding: 0.5rem 0.75rem; margin: 0; min-width: 0;">
+            {% if r.configured %}
+            <span class="badge badge-ok">{{ r.label }}</span>
+            {% else %}
+            <span class="badge badge-warn">{{ r.label }}</span>
+            {% endif %}
+            <div style="font-size: 0.75rem; color: var(--muted); margin-top: 0.25rem;">
+                {{ r.hint }}{% if r.configured %} &middot; {{ r.model }}{% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
 <h2 class="mt-2">Recent Farming Cycles</h2>
 <div class="card">
     {% if farming_cycles %}

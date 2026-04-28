@@ -100,6 +100,66 @@ async def _get_vector_count(vector_store) -> int:
         return 0
 
 
+def _get_llm_role_status() -> list[dict[str, Any]]:
+    """One-glance health of all 6 LLM roles.
+
+    Reads the per-role config from the .env file (same source the
+    factory uses) and reports whether each role has an API key /
+    base_url / model set.  Does NOT make a network call -- pinging
+    every role on every dashboard render would burn budget and
+    block the page on slow endpoints.  "configured" here means
+    "would create a provider", not "responded successfully".
+
+    Returns one row per role with:
+        - key:       role id (extraction, query_planning, ...)
+        - label:     display name
+        - configured: True iff api_key set OR base_url is localhost
+        - model:     configured model name (may be the default)
+        - hint:      short status string for the badge
+    """
+    try:
+        from ctxmtg.config.env_file import LLM_ROLES, get_role_config
+    except Exception:
+        return []
+
+    # Display labels mirror local.py STAGE_ROLES so the dashboard and
+    # the config page agree on names.
+    labels = {
+        "extraction": "Extraction",
+        "query_planning": "Query Planning",
+        "retrieval": "Retrieval",
+        "synthesis": "Synthesis",
+        "farming": "Farming",
+        "fusion": "Fusion",
+    }
+
+    out: list[dict[str, Any]] = []
+    for role in LLM_ROLES:
+        cfg = get_role_config(role) or {}
+        api_key = (cfg.get("api_key") or "").strip()
+        base_url = (cfg.get("base_url") or "").strip()
+        model = (cfg.get("model") or "").strip() or "(default)"
+
+        # "configured" mirrors APIProvider.is_available() logic:
+        # we accept localhost endpoints without an API key.
+        is_local = "localhost" in base_url or "127.0.0.1" in base_url
+        configured = bool(api_key) or is_local
+
+        if configured:
+            hint = "configured (local)" if is_local and not api_key else "configured"
+        else:
+            hint = "not set"
+
+        out.append({
+            "key": role,
+            "label": labels.get(role, role),
+            "configured": configured,
+            "model": model,
+            "hint": hint,
+        })
+    return out
+
+
 @router.get("/", response_class=HTMLResponse, dependencies=[Depends(require_auth)])
 async def dashboard(request: Request):
     """Render the main dashboard page."""
@@ -111,6 +171,7 @@ async def dashboard(request: Request):
     hive_stats = await _get_hive_stats(hive_db)
     farming_cycles = await _get_recent_farming(sql_store)
     vector_count = await _get_vector_count(vector_store)
+    llm_roles = _get_llm_role_status()
 
     return templates.TemplateResponse(
         request,
@@ -120,6 +181,7 @@ async def dashboard(request: Request):
             "hive": hive_stats,
             "vectors": vector_count,
             "farming_cycles": farming_cycles,
+            "llm_roles": llm_roles,
         },
     )
 

@@ -29,6 +29,50 @@
     {% include "fragments/entity_groups.html" %}
 </div>
 
+{# Top distilled entities -- the user-visible surface for Phase 4.1.
+   Read-only view of distiller_summaries.  Empty until at least one
+   farming cycle has run.  When the farming-role LLM is wired, the
+   summary string is the one-sentence narrative; otherwise it is the
+   deterministic mechanical string. #}
+{% if distilled %}
+<div class="card mt-2">
+    <h2>Top Distilled Entities</h2>
+    <p style="color:var(--muted); margin-bottom: 1rem;">
+        Highest-relevance entities and their distilled summaries
+        (refreshed each farming cycle).  Summary is LLM-narrated when
+        a farming-role LLM is configured; otherwise mechanical.
+    </p>
+    <table>
+        <thead>
+            <tr>
+                <th>Entity</th>
+                <th>Type</th>
+                <th>Summary</th>
+                <th>Top predicates</th>
+                <th>Co-entities</th>
+                <th>Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in distilled %}
+            <tr>
+                <td><strong>{{ d.entity_name }}</strong></td>
+                <td><span class="badge badge-ok">{{ d.entity_type }}</span></td>
+                <td style="max-width: 480px;">{{ d.summary }}</td>
+                <td style="font-size:0.85rem; color:var(--muted);">
+                    {{ d.top_predicates | join(", ") }}
+                </td>
+                <td style="font-size:0.85rem; color:var(--muted);">
+                    {{ d.top_co_entities | join(", ") }}
+                </td>
+                <td>{{ "%.2f"|format(d.relevance_score) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
 <!-- Near-Duplicate Pairs -->
 {% if pairs %}
 <div class="card mt-2">

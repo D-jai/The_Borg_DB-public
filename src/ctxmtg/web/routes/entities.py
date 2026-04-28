@@ -79,6 +79,65 @@ async def _find_duplicate_candidates(sql_store, min_group: int = 2) -> list[dict
     return groups
 
 
+async def _top_distilled_entities(sql_store, limit: int = 25) -> list[dict]:
+    """Top entities by distilled relevance, with their natural-language
+    summary written by the Distiller stage.
+
+    Surfaces the user-visible payoff of Phase 4.1 -- when a farming
+    LLM is wired in, ``summary`` is a one-sentence narrative; when
+    not, it is the deterministic mechanical string.  Either way, the
+    page shows what the system knows about the highest-relevance
+    entities at a glance.
+
+    The query is read-only and bounded; it does not write or mutate
+    distiller_summaries (that is the Distiller stage's job).
+    """
+    try:
+        rows = await sql_store.execute_sql(
+            """SELECT entity_name,
+                      entity_type,
+                      summary,
+                      top_predicates,
+                      top_co_entities,
+                      relevance_score,
+                      updated_at
+               FROM distiller_summaries
+               ORDER BY relevance_score DESC
+               LIMIT :limit""",
+            {"limit": limit},
+        )
+    except Exception:
+        # Table may not exist on a brand-new install (no farming run
+        # yet) -- treat as "no rows" rather than 500.
+        return []
+
+    out: list[dict] = []
+    for row in rows:
+        # top_predicates / top_co_entities are JSON-encoded lists
+        # written by distiller.py.  Decode defensively so a stray
+        # non-JSON value does not break the page render.
+        import json as _json
+        def _decode_list(raw: str | None) -> list[str]:
+            if not raw:
+                return []
+            try:
+                value = _json.loads(raw)
+                return [str(x) for x in value] if isinstance(value, list) else []
+            except Exception:
+                return []
+
+        out.append({
+            "entity_name": row["entity_name"],
+            "entity_type": row["entity_type"],
+            "summary": row["summary"] or "",
+            "top_predicates": _decode_list(row.get("top_predicates")),
+            "top_co_entities": _decode_list(row.get("top_co_entities")),
+            "relevance_score": row.get("relevance_score") or 0.0,
+            "updated_at": row.get("updated_at") or "",
+        })
+    return out
+
+
 async def _find_similar_names(sql_store) -> list[dict]:
     """Find entities with names that differ only by case or whitespace.
 
@@ -127,6 +186,7 @@ async def entities_page(
     """Render the entity resolution page."""
     groups = await _find_duplicate_candidates(sql_store)
     pairs = await _find_similar_names(sql_store)
+    distilled = await _top_distilled_entities(sql_store)
 
     # Get total entity stats.
     stats_rows = await sql_store.execute_sql(
@@ -145,6 +205,7 @@ async def entities_page(
             "groups": groups,
             "pairs": pairs,
             "stats": stats,
+            "distilled": distilled,
         },
     )
 

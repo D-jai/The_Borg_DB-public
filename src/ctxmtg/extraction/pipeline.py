@@ -76,6 +76,7 @@ from ctxmtg.storage.id_gen import generate_entity_id
 if TYPE_CHECKING:
     from ctxmtg.extraction.intelligence import IntelligenceContext
     from ctxmtg.extraction.llm_verifier import LLMExtractionVerifier
+    from ctxmtg.interfaces.llm import LLMProvider
 
 # ---------------------------------------------------------------
 # Logger for the pipeline orchestrator. Logs step timings and
@@ -90,6 +91,38 @@ logger = structlog.get_logger("ctxmtg.extraction.pipeline")
 # ---------------------------------------------------------------
 MAX_CONTEXT_CHARS = 500  # Max serialized context dict size
 MAX_TAGS_PAIRS = 20  # Max key-value pairs in tags dict
+
+# ---------------------------------------------------------------
+# Abstractive-summary LLM call configuration.  Kept tight: the
+# task is 2-3 sentence narrative summarisation of a single
+# interaction; low temperature for stability, ~150 output tokens
+# is plenty.  Mirrors the Phase 4.1 Distiller wiring shape.
+# ---------------------------------------------------------------
+SUMMARY_SYSTEM_PROMPT = (
+    "You are a knowledge-base summariser.  Given the raw text of a "
+    "single interaction (a meeting note, email, ticket, document, or "
+    "chat), produce a 2-3 sentence factual summary capturing what "
+    "happened or what was said.  Use active voice.  Do not invent "
+    "facts not present in the source.  Do not editorialise.  Do not "
+    "mention \"the knowledge base\", \"the system\", or \"this "
+    "interaction\".  If the source is too short or empty to summarise "
+    "meaningfully, output the literal string INSUFFICIENT and nothing "
+    "else."
+)
+
+SUMMARY_USER_PROMPT_TEMPLATE = (
+    "Source text:\n"
+    "---\n"
+    "{content}\n"
+    "---\n"
+    "\n"
+    "Write the 2-3 sentence summary now."
+)
+
+_SUMMARY_LLM_MAX_TOKENS = 200
+_SUMMARY_LLM_TEMPERATURE = 0.2
+_SUMMARY_LLM_INSUFFICIENT_SENTINEL = "INSUFFICIENT"
+_SUMMARY_LLM_INPUT_CHAR_CAP = 8000  # truncate long content for the prompt
 
 
 # =====================================================================
@@ -127,6 +160,7 @@ class BasicExtractionPipeline(ExtractionPipeline):
         self,
         profile: DomainProfile,
         llm_verifier: LLMExtractionVerifier | None = None,
+        llm: LLMProvider | None = None,
     ) -> None:
         """
         Initialize the extraction pipeline with a domain profile.
@@ -141,12 +175,25 @@ class BasicExtractionPipeline(ExtractionPipeline):
             llm_verifier: Optional LLM-based extraction verifier. If provided,
                           called after Phase 1 extraction to verify and enhance
                           results. If None, Phase 1 behavior is unchanged.
+            llm: Optional LLM provider used for abstractive summary
+                 generation.  When supplied and available, the
+                 deterministic TextRank summary is replaced by a 2-3
+                 sentence natural-language summary.  Any failure path
+                 (unavailable provider, empty response, INSUFFICIENT
+                 sentinel, exception) falls back to the TextRank
+                 string, so behaviour with ``llm=None`` is unchanged.
+                 Typically the same ``extraction``-role provider that
+                 backs ``llm_verifier``; passed separately so callers
+                 can mix-and-match.
         """
         # Store the profile for later reference
         self._profile = profile
 
         # Store the optional LLM verifier (Phase 2 enhancement)
         self._llm_verifier = llm_verifier
+
+        # Store the optional summarisation LLM provider.
+        self._llm = llm
 
         # ---------------------------------------------------------------
         # Initialize the spaCy NER provider. This loads the spaCy model
@@ -345,9 +392,17 @@ class BasicExtractionPipeline(ExtractionPipeline):
         # ---------------------------------------------------------------
         # Step 8: Summarize the interaction content.
         # Uses TextRank to pick the most representative sentences.
-        # Reuses the Doc from step 1.
+        # Reuses the Doc from step 1.  When an LLM is configured, the
+        # deterministic string is replaced by a 2-3 sentence
+        # abstractive summary; any LLM failure falls back to TextRank.
         # ---------------------------------------------------------------
-        summary = self._summarizer.summarize_from_doc(doc, max_length=300)
+        deterministic_summary = self._summarizer.summarize_from_doc(
+            doc, max_length=300
+        )
+        summary = self._maybe_llm_summary(
+            content=content,
+            fallback=deterministic_summary,
+        )
 
         # ---------------------------------------------------------------
         # Step 9: Chunk text for embedding.
@@ -397,6 +452,72 @@ class BasicExtractionPipeline(ExtractionPipeline):
             chunk_count=len(result.chunks),
             summary_length=len(result.summary) if result.summary else 0,
         )
+
+        return result
+
+    # -----------------------------------------------------------------
+    # LLM helpers
+    # -----------------------------------------------------------------
+
+    def _maybe_llm_summary(self, *, content: str, fallback: str) -> str:
+        """
+        Generate a 2-3 sentence abstractive summary via the LLM, with
+        the deterministic TextRank summary as the unconditional
+        fallback.
+
+        If no LLM is configured, the provider reports unavailable, the
+        response is empty, the LLM emits the ``INSUFFICIENT`` sentinel,
+        or any exception escapes ``generate``, the TextRank string is
+        used unchanged.  Long source content is hard-truncated before
+        being sent to the prompt to keep the input token bound
+        predictable.
+
+        Args:
+            content:  Full interaction content (raw text).
+            fallback: The TextRank summary computed by step 8.  Used
+                      whenever the LLM path can't produce a usable
+                      string.
+
+        Returns:
+            A summary string -- either the LLM rewrite or ``fallback``.
+        """
+        if self._llm is None:
+            return fallback
+        try:
+            if not self._llm.is_available():
+                return fallback
+        except Exception:
+            return fallback
+
+        # Empty / whitespace content can't yield a meaningful LLM
+        # summary; the TextRank fallback (also empty in that case) is
+        # the right answer.
+        text_in = (content or "").strip()
+        if not text_in:
+            return fallback
+
+        # Truncate very long source text -- the prompt is not the
+        # right place to send a 200KB document, and the chunker /
+        # vector path already covers full-document recall.
+        if len(text_in) > _SUMMARY_LLM_INPUT_CHAR_CAP:
+            text_in = text_in[:_SUMMARY_LLM_INPUT_CHAR_CAP] + "..."
+
+        user_prompt = SUMMARY_USER_PROMPT_TEMPLATE.format(content=text_in)
+
+        try:
+            raw = self._llm.generate(
+                prompt=user_prompt,
+                system_prompt=SUMMARY_SYSTEM_PROMPT,
+                temperature=_SUMMARY_LLM_TEMPERATURE,
+                max_tokens=_SUMMARY_LLM_MAX_TOKENS,
+            )
+        except Exception as exc:
+            logger.warning("extraction_llm_summary_failed", error=str(exc))
+            return fallback
+
+        result = (raw or "").strip()
+        if not result or result.upper() == _SUMMARY_LLM_INSUFFICIENT_SENTINEL:
+            return fallback
 
         return result
 

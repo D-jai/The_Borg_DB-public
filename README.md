@@ -178,9 +178,10 @@ prompt-experimentation methodology and the planned eval harness.
    issues. Every "why isn't this fixed?" question has its answer
    here, including which items are deliberate non-goals.
 6. **`llm_design.md`** -- the LLM strategy working spec. Read
-   Section 10 ("Recommended sequence") for the current
-   next-step plan. **Phase 4.1 (Distiller LLM wiring) is the
-   immediate next concrete deliverable.**
+   Section 10 ("Recommended sequence") for the long-term plan.
+   **Phase 4.1 has shipped** (`DistillerStage` LLM wiring); the
+   `[Unreleased]` CHANGELOG section is the source of truth for
+   what is live today.
 7. **`CHANGELOG.md`** -- what shipped when. The most recent
    section is always the source of truth for current shape.
 
@@ -211,25 +212,62 @@ prompt-experimentation methodology and the planned eval harness.
   cross-interaction join question is real but the fix is
   name-keying the two id-keyed stages, not changing the id
   model.
-- **`self._llm` is intentionally pre-wired** in 16 of 18 farming
-  stages even though none of them call `.generate()` today.
-  Adding LLM logic to one stage is a one-method change. Don't
-  remove the parameter "to clean up unused state".
+- **`self._llm` is intentionally pre-wired** in the farming
+  stages. As of Phase 4.1 the **Distiller** stage actually
+  calls `.generate()` (see `farming/distiller.py
+  ::_maybe_llm_summary`); the other 15 still hold the parameter
+  for future wirings. Adding LLM logic to a stage is a
+  one-method change. Don't remove the parameter "to clean up
+  unused state".
 - **Schema migrations are unidirectional**. If you add a DDL
   constant, append to `ALL_DDL` and bump `SCHEMA_VERSION`.
   Don't reorder or delete existing constants.
 - **The CLI is the contract**. CLI flags and subcommand names
   do not change without a CHANGELOG entry. Adding new commands
   is fine; renaming or removing requires version coordination.
+- **The LLM is an enhancer, never a source of truth.** Every
+  `self._llm.generate(...)` call in this codebase MUST be
+  wrapped so that any failure path (provider unavailable,
+  empty response, sentinel like `INSUFFICIENT`, raised
+  exception) falls back to a deterministic baseline. The
+  reference shapes are
+  `farming/distiller.py::_maybe_llm_summary` and
+  `extraction/pipeline.py::_maybe_llm_summary`. Behaviour with
+  `llm=None` MUST be byte-for-byte identical to behaviour
+  before the wiring. Do not write LLM-only code paths.
+- **Hallucination guardrails are in the prompts.** Distiller
+  and abstractive-summary prompts both contain "Do not invent
+  facts" and an `INSUFFICIENT` sentinel for thin inputs. If
+  you draft new prompt variants, keep both rules. LLM output
+  becomes a *description* string -- it MUST NOT enter the
+  entities, facts, or insights tables as structured truth
+  unless it has been name-checked / type-checked against the
+  source.
+- **HTTP ingest = CLI ingest.** `web/routes/ingest.py
+  ::_do_ingest` mirrors the CLI's
+  `_init_ingest_worker` exactly: same profile loader, same
+  extraction-role provider, same `LLMExtractionVerifier`,
+  same `BasicExtractionPipeline(llm=...)`. If you add a new
+  extraction wiring, add it in **both** places or factor a
+  shared helper.
 
 ### Common task shapes and how to start them
 
 - **"Add LLM logic to a farming stage"** -- start at the stage
   file, find `self._llm`, add the call site near where the
   stage's deterministic logic produces its summary string.
-  Pattern: `if self._llm: <call>` so the stage still runs
-  without a configured LLM. See `query/synthesizer.py` for
-  reference.
+  Pattern: compute deterministic value first, then call a
+  private `_maybe_llm_*` helper that returns the deterministic
+  value on every failure path (None / unavailable / empty /
+  sentinel / exception). Reference implementation:
+  `farming/distiller.py::_maybe_llm_summary` (Phase 4.1).
+- **"Add LLM logic at ingest"** -- the extraction pipeline
+  takes both an `llm_verifier` (for NER+fact verification) and
+  an `llm` (for the abstractive summary). Both arrive from the
+  same per-role provider; both fall back deterministically.
+  CLI and `/api/ingest` BOTH wire them -- if you change the
+  wiring, change both call sites. Reference:
+  `extraction/pipeline.py::_maybe_llm_summary`.
 - **"Add a new farming stage"** -- conform to `interfaces/farming.py`,
   register in `farming/__init__.create_default_stages()`,
   decide whether you need a checkpoint row and a progress

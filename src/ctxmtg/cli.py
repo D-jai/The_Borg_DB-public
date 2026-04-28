@@ -1422,7 +1422,12 @@ def _create_worker(ctx: click.Context):
         from ctxmtg.extraction.pipeline import BasicExtractionPipeline
 
         # Wire LLM verifier if extraction API key is configured.
+        # Both `llm_verifier` and `extraction_llm` MUST be defined
+        # before the BasicExtractionPipeline call below, otherwise a
+        # raise inside the inner try would NameError.  The pipeline
+        # accepts `None` for both and degrades gracefully.
         llm_verifier = None
+        extraction_llm = None
         try:
             from ctxmtg.llm.factory import create_provider
             extraction_llm = create_provider("extraction", db_path=db_path)
@@ -1439,7 +1444,11 @@ def _create_worker(ctx: click.Context):
         except Exception:
             pass
 
-        extraction = BasicExtractionPipeline(profile, llm_verifier=llm_verifier)
+        extraction = BasicExtractionPipeline(
+            profile,
+            llm_verifier=llm_verifier,
+            llm=extraction_llm,
+        )
     except Exception as exc:
         click.echo(f"Warning: Extraction pipeline unavailable: {exc}", err=True)
 
