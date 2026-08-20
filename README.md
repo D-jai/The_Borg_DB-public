@@ -18,7 +18,7 @@ at a local model server, a hosted API, or both.
 
 ```bash
 # Clone and install
-git clone https://github.com/D-jai/The_Borg_DB.git
+git clone https://github.com/D-jai/The_Borg_DB-public
 cd The_Borg_DB
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[web]"
