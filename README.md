@@ -19,7 +19,7 @@ at a local model server, a hosted API, or both.
 ```bash
 # Clone and install
 git clone https://github.com/D-jai/The_Borg_DB-public
-cd The_Borg_DB
+cd The_Borg_DB-public
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[web]"
 python -m spacy download en_core_web_sm
@@ -292,6 +292,11 @@ prompt-experimentation methodology and the planned eval harness.
   for the resolver).
 - Whether to add CSRF / rate-limit / request-validation to the
   web routes (currently softened by localhost-only deployment).
+
+## Related projects
+
+- [BORG_ROUTE](https://github.com/D-jai/Borg_Routing): breaks a job into steps and sends each step to the cheapest model that can do it, local or cloud.
+- [openclaw-openwebui-pipe](https://github.com/D-jai/openclaw-openwebui-pipe): connects Open WebUI's chat to an OpenClaw agent.
 
 ## License
 
